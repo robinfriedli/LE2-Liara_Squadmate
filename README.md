@@ -18,11 +18,11 @@ and how they function.
  - [X] Expand global squad spawn sequence in `BioP_Global.pcc` for Liara
    - [X] Expand `Create_Henchmen` sequences by adding sequence for label "Liara", which invokes `SetStreamingState` with "stream_liara_00"
    - [X] Add 15th output link to switch in `SpawnHenchman_1` and `SpawnHenchman_0` invoking `Create_Henchmen` sequence with label "Liara" for ID 14
- - [X] Adjust certain mission specific squad selection sequences in BioP files**
+ - [X] Adjust certain mission specific squad selection sequences in BioP files
    - [X] Mod sequence `LookupHenchmanFromPlotManager` to look up plot flag 6879 (InSquadLiara) and set Henchman ID to 14 if true
    - [X] Mod following 2 sequences after `LookupHenchmanFromPlotManager` to compare int to 15 instead of 14 and add 15th output link to switch, which invokes transition 10900301 setting plot bool 6879 to true
    - [X] Add `CompareName` sequence for "hench_liara" to all `IsTag_Henchman` sequences
- - [X] Adjust certain cutscenes in BioD files**
+ - [X] Adjust certain cutscenes in BioD files
    - [X] Add `CompareName` sequence for "hench_liara" to all `IsTag_Henchman` sequences
  - [X] Patch LotSB to fix incompatibilities with this mod's global hanling for Liara
    - [X] Mirror changes to `GUI_SF_TeamSelect` from `BioH_SelectGUI`
@@ -32,12 +32,8 @@ and how they function.
  - [ ] Polish Squad Selection screen
    - [ ] Fix visuals for highlight effect when Liara is selected (currently showing double)
 
-** Currently implemented missions / spawns:
- - Hub areas: Omega / Citadel / Illium / Tuchanka 
- - The Collector Ship mission 
- - Garrus / Tali / Mordin / Grunt loyalty missions 
- - Tali's recruitment mission 
- - N7: Blood Pack Base
+All auto modded files created by auto_patcher have been published, so all missions and spawns should work. However, most
+missions are still untested and the suicide mission has not been handled yet.
 
 ## Mod info
 
