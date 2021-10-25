@@ -28,7 +28,7 @@ and how they function.
    - [X] Mirror changes to `GUI_SF_TeamSelect` from `BioH_SelectGUI`
    - [X] Remove special handling for Liara from sequence `REF_Henchmen_PlaceOnceInMasterMap` and adjust `LookupHenchmanFromPlotManager` sequence analogous to rest of game to handle Liara globally instead
  - [ ] Patch Suicide Mission to enable support for Liara
- - [ ] Write auto patch tool to adjust remaining BioP and BioD automatically
+ - [X] Write auto patch tool to adjust remaining BioP and BioD files automatically
  - [ ] Polish Squad Selection screen
    - [ ] Fix visuals for highlight effect when Liara is selected (currently showing double)
 
@@ -56,8 +56,18 @@ plot variables, transitions, coniditionals etc.
 | WasLoyalLiara      | 10900103      | (new plot bool)           |
 | KnowExistLiara     | 6961          | Started_Car_Chase (LotSB) |
 | AppearanceLiara    | 10900104      | (new plot int, unused)    |
+| WasInSquadLiara    | 10900105      | (new plot bool)           |
 
 Started_Car_Chase is used for InPartyLiara and KnowExistLiara to make sure Liara appears in the squad selection screen
 during LotSB (there is a squad selection screen before reaching the Shadow Broker ship). Note that IsSelectableLiara is
 enabled later by 6951 (End_Mission), which means after LotSB has been completed, guaranteeing that Liara cannot be deselected
 during LotSB, similar to how loyalty missions work.
+
+## Plot transitions / state events
+
+| State Event | Desc                                                          |
+| ----------- | ------------------------------------------------------------- |
+| 10900301    | Set 6879 (LiaraInSquad) to true                               |
+| 10900302    | Set 10900105 (WasInSquadLiara) to true                        |
+| 10900303    | Expansion of 1910 (Was_In_Squad.Clear_all) that handles Liara |
+| 10900304    | Expansion of 75 (In_Squad.Clear_Squad) that handles Liara     |

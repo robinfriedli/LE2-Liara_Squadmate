@@ -16,7 +16,9 @@ namespace auto_patcher
     class Program
     {
         public const int LiaraInSquadPlotId = 6879;
+        public const int LiaraWasInSquadPlotId = 10900105;
         public const int LiaraInSquadPlotTransitionId = 10900301;
+        public const int LiaraWasInSquadPlotTransitionId = 10900302;
         public const int LiaraHenchmanId = 14;
 
         const string ModPackageDir = "..\\DLC_MOD_LiaraSquad\\CookedPCConsole";
@@ -27,6 +29,7 @@ namespace auto_patcher
         private static readonly ISet<string> ExcludedPackages = new HashSet<string>
         {
             "BioP_Global.pcc",
+            "BioH_SelectGUI.pcc",
             "BioP_Exp1Lvl2.pcc",
             "BioP_Exp1Lvl3.pcc",
             "BioP_Exp1Lvl4.pcc"
@@ -36,8 +39,21 @@ namespace auto_patcher
             RelevantSequenceMap = new()
             {
                 {"LookupHenchmanFromPlotManager", LookupHenchmanFromPlotManagerSequence.CreateIfRelevant},
-                {"IsTag_Henchman", IsTagHenchmanSequence.CreateIfRelevant}
+                {"IsTag_Henchman", IsTagHenchmanSequence.CreateIfRelevant},
+                {"Store_the_Henchmen_in_the_Squad", StoreTheHenchmenInTheSquadSequence.CreateIfRelevant},
+                {
+                    "Retrieve_the_Henchmen_previously_in_the_Squad",
+                    RetrieveTheHenchmenPreviouslyInTheSquadSequence.CreateIfRelevant
+                }
             };
+
+        public static readonly Dictionary<int, int> ReplacedStateEventIds = new()
+        {
+            // In_Squad.Clear_Squad
+            {75, 10900304},
+            // Was_In_Squad.Clear_all
+            {1910, 10900303}
+        };
 
         public class Options
         {
@@ -286,24 +302,26 @@ namespace auto_patcher
 
             foreach (var packageExport in package.Exports)
             {
+                if (!"Sequence".Equals(packageExport.ClassName))
+                {
+                    continue;
+                }
+
                 if (foundLookupHenchmanFromPlotManager)
                 {
                     // the LookupHenchmanFromPlotManager is usually followed by 2 unnamed sequences that execute plot transitions
-                    if ("Sequence".Equals(packageExport.ClassName))
-                    {
-                        var plotTransitionSequence = PlotTransitionSequence.CreateIfRelevant(
-                            packageExport,
-                            SeqTools
-                                .GetAllSequenceElements(packageExport)
-                                .Select(entry => (ExportEntry) entry)
-                                .ToList()
-                        );
+                    var plotTransitionSequence = PlotTransitionSequence.CreateIfRelevant(
+                        packageExport,
+                        SeqTools
+                            .GetAllSequenceElements(packageExport)
+                            .Select(entry => (ExportEntry) entry)
+                            .ToList()
+                    );
 
-                        if (plotTransitionSequence != null)
-                        {
-                            relevantSequences.Add(plotTransitionSequence);
-                            continue;
-                        }
+                    if (plotTransitionSequence != null)
+                    {
+                        relevantSequences.Add(plotTransitionSequence);
+                        continue;
                     }
                 }
 
@@ -314,24 +332,70 @@ namespace auto_patcher
                     continue;
                 }
 
-                RelevantSequenceMap.TryGetValue(objectName, out var relevantSequenceInitializer);
-
-                if (relevantSequenceInitializer == null)
-                {
-                    continue;
-                }
-
                 var allSequenceElements = SeqTools.GetAllSequenceElements(packageExport);
 
-                if (!allSequenceElements.TrueForAll(sequenceElement => sequenceElement is ExportEntry))
+                if (allSequenceElements == null
+                    || !allSequenceElements.TrueForAll(sequenceElement => sequenceElement is ExportEntry))
                 {
                     // skip sequences containing imported sequence objects
                     continue;
                 }
 
+                var sequenceObjects = allSequenceElements.Select(entry => (ExportEntry) entry).ToList();
+
+                var replacedStateTransitions = sequenceObjects.Where(obj =>
+                {
+                    if (!"BioSeqAct_PMExecuteTransition".Equals(obj.ClassName)) return false;
+                    var transitionId = obj.GetProperty<IntProperty>("m_nIndex");
+                    return transitionId != null && ReplacedStateEventIds.ContainsKey(transitionId);
+                }).ToList();
+
+                if (!replacedStateTransitions.IsEmpty())
+                {
+                    relevantSequences.Add(
+                        new ReplacedStateTransitionsSequence(
+                            packageExport,
+                            sequenceObjects,
+                            packageExport,
+                            replacedStateTransitions
+                        )
+                    );
+                }
+
+                RelevantSequenceMap.TryGetValue(objectName, out var relevantSequenceInitializer);
+
+                if (relevantSequenceInitializer == null)
+                {
+                    // sometimes the Store_the_Henchmen_in_the_Squad sequence is unnamed
+                    var inputLinksProp = packageExport.GetProperty<ArrayProperty<StructProperty>>("InputLinks");
+                    if (inputLinksProp == null || inputLinksProp.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    var inputLink = inputLinksProp[0];
+                    var linkDescProp = inputLink.GetProp<StrProperty>("LinkDesc");
+                    if (linkDescProp == null)
+                    {
+                        continue;
+                    }
+
+                    if ("Store Henchmen".Equals(linkDescProp.Value))
+                    {
+                        var storeTheHenchmenInTheSquadSequence =
+                            StoreTheHenchmenInTheSquadSequence.CreateIfRelevant(packageExport, sequenceObjects);
+                        if (storeTheHenchmenInTheSquadSequence != null)
+                        {
+                            relevantSequences.Add(storeTheHenchmenInTheSquadSequence);
+                        }
+                    }
+
+                    continue;
+                }
+
                 var relevantSequence = relevantSequenceInitializer.Invoke(
                     packageExport,
-                    allSequenceElements.Select(entry => (ExportEntry) entry).ToList()
+                    sequenceObjects
                 );
 
                 if (relevantSequence != null)
@@ -347,9 +411,9 @@ namespace auto_patcher
 
     abstract class RelevantSequence
     {
-        public ExportEntry Sequence { get; set; }
-        public List<ExportEntry> SequenceObjects { get; set; }
-        public ExportEntry KeySequenceObject { get; set; }
+        public ExportEntry Sequence { get; }
+        public List<ExportEntry> SequenceObjects { get; }
+        public ExportEntry KeySequenceObject { get; }
 
         public RelevantSequence(ExportEntry sequence, List<ExportEntry> sequenceObjects, ExportEntry keySequenceObject)
         {
@@ -416,16 +480,10 @@ namespace auto_patcher
             KismetHelper.AddObjectToSequence(liaraSequenceReference, Sequence);
 
             // relink SequenceReference of KeySequenceObject to the CheckState object for Liara
-            var keySequenceReferenceOutputLinks = SeqTools.GetOutboundLinksOfNode(keySequenceReference);
-            var keySequenceReferenceOutLink = Util.GetOutboundLink(keySequenceReferenceOutputLinks, 0, 0);
-            keySequenceReferenceOutLink.LinkedOp = checkStateLiara;
-            SeqTools.WriteOutboundLinksToNode(keySequenceReference, keySequenceReferenceOutputLinks);
+            Util.RelinkOutputLink(keySequenceReference, 0, 0, checkStateLiara);
 
             // link CheckState object Liara to SequenceObject for Liara if true
-            var checkStateLiaraOutboundLinks = SeqTools.GetOutboundLinksOfNode(checkStateLiara);
-            var checkStateLiaraTrueLink = Util.GetOutboundLink(checkStateLiaraOutboundLinks, 0, 0);
-            checkStateLiaraTrueLink.LinkedOp = liaraSequenceReference;
-            SeqTools.WriteOutboundLinksToNode(checkStateLiara, checkStateLiaraOutboundLinks);
+            Util.RelinkOutputLink(checkStateLiara, 0, 0, liaraSequenceReference);
 
             // copy referenced sequence and relink SequenceReference for Liara
             var keyReferencedSequenceProperty = keySequenceReference.GetProperty<ObjectProperty>("oSequenceReference");
@@ -573,8 +631,8 @@ namespace auto_patcher
 
     class PlotTransitionSequence : RelevantSequence
     {
-        private ExportEntry Compare14 { get; set; }
-        private ExportEntry SwitchObject { get; set; }
+        private ExportEntry Compare14 { get; }
+        private ExportEntry SwitchObject { get; }
 
         public PlotTransitionSequence(
             ExportEntry sequence,
@@ -666,6 +724,141 @@ namespace auto_patcher
         }
     }
 
+    abstract class GenericCheckStateExecuteTransitionSequence : RelevantSequence
+    {
+        private int CheckStateId { get; }
+        private int TransitionId { get; }
+
+        public GenericCheckStateExecuteTransitionSequence(
+            ExportEntry sequence,
+            List<ExportEntry> sequenceObjects,
+            ExportEntry keySequenceObject,
+            int checkStateId,
+            int transitionId
+        ) : base(sequence, sequenceObjects, keySequenceObject)
+        {
+            CheckStateId = checkStateId;
+            TransitionId = transitionId;
+        }
+
+        public override void HandleSequence(IMEPackage package)
+        {
+            var checkStateLiara = (ExportEntry) ((IEntry) KeySequenceObject).Clone(true);
+            package.AddExport(checkStateLiara);
+            KismetHelper.AddObjectToSequence(checkStateLiara, Sequence);
+            KismetHelper.SetComment(checkStateLiara, "Liara");
+            Util.WriteProperty<IntProperty>(
+                checkStateLiara,
+                "m_nIndex",
+                prop => prop.Value = CheckStateId
+            );
+
+            Util.RelinkOutputLink(KeySequenceObject, 1, 0, checkStateLiara);
+
+            var keyCheckStateOutboundLinks = SeqTools.GetOutboundLinksOfNode(KeySequenceObject);
+            var keyPlotTransition = Util.GetOutboundLink(keyCheckStateOutboundLinks, 0, 0).LinkedOp;
+            if (keyPlotTransition is not ExportEntry
+                || !"BioSeqAct_PMExecuteTransition".Equals(keyPlotTransition.ClassName))
+            {
+                throw new SequenceStructureException("True output link of CheckState does not link to plot transition");
+            }
+
+            var liaraPlotTransition = (ExportEntry) keyPlotTransition.Clone(true);
+            package.AddExport(liaraPlotTransition);
+            KismetHelper.AddObjectToSequence(liaraPlotTransition, Sequence);
+            KismetHelper.SetComment(liaraPlotTransition, "Liara");
+            Util.WriteProperty<IntProperty>(
+                liaraPlotTransition,
+                "m_nIndex",
+                prop => prop.Value = TransitionId
+            );
+
+            Util.RelinkOutputLink((ExportEntry) keyPlotTransition, 0, 0, checkStateLiara);
+            Util.RelinkOutputLink(checkStateLiara, 0, 0, liaraPlotTransition);
+        }
+    }
+
+    class StoreTheHenchmenInTheSquadSequence : GenericCheckStateExecuteTransitionSequence
+    {
+        public StoreTheHenchmenInTheSquadSequence(
+            ExportEntry sequence,
+            List<ExportEntry> sequenceObjects,
+            ExportEntry keySequenceObject
+        ) : base(
+            sequence,
+            sequenceObjects,
+            keySequenceObject,
+            Program.LiaraInSquadPlotId,
+            Program.LiaraWasInSquadPlotTransitionId
+        )
+        {
+        }
+
+        public static StoreTheHenchmenInTheSquadSequence? CreateIfRelevant(
+            ExportEntry sequence,
+            List<ExportEntry> sequenceObjects
+        )
+        {
+            var keySequenceObject = sequenceObjects.FindLast(sequenceObject =>
+                sequenceObject.ClassName.Equals("BioSeqAct_PMCheckState"));
+            return keySequenceObject != null
+                ? new StoreTheHenchmenInTheSquadSequence(sequence, sequenceObjects, keySequenceObject)
+                : null;
+        }
+    }
+
+    class RetrieveTheHenchmenPreviouslyInTheSquadSequence : GenericCheckStateExecuteTransitionSequence
+    {
+        public RetrieveTheHenchmenPreviouslyInTheSquadSequence(
+            ExportEntry sequence,
+            List<ExportEntry> sequenceObjects,
+            ExportEntry keySequenceObject
+        ) : base(
+            sequence,
+            sequenceObjects,
+            keySequenceObject,
+            Program.LiaraWasInSquadPlotId,
+            Program.LiaraInSquadPlotTransitionId
+        )
+        {
+        }
+
+        public static RetrieveTheHenchmenPreviouslyInTheSquadSequence? CreateIfRelevant(
+            ExportEntry sequence,
+            List<ExportEntry> sequenceObjects
+        )
+        {
+            var keySequenceObject = sequenceObjects.FindLast(sequenceObject =>
+                sequenceObject.ClassName.Equals("BioSeqAct_PMCheckState"));
+            return keySequenceObject != null
+                ? new RetrieveTheHenchmenPreviouslyInTheSquadSequence(sequence, sequenceObjects, keySequenceObject)
+                : null;
+        }
+    }
+
+    class ReplacedStateTransitionsSequence : RelevantSequence
+    {
+        private List<ExportEntry> ReplacedStateTransitions { get; }
+
+        public ReplacedStateTransitionsSequence(ExportEntry sequence, List<ExportEntry> sequenceObjects,
+            ExportEntry keySequenceObject, List<ExportEntry> replacedStateTransitions) : base(sequence, sequenceObjects,
+            keySequenceObject)
+        {
+            ReplacedStateTransitions = replacedStateTransitions;
+        }
+
+        public override void HandleSequence(IMEPackage package)
+        {
+            foreach (var replacedStateTransition in ReplacedStateTransitions)
+            {
+                Util.WriteProperty<IntProperty>(
+                    replacedStateTransition,
+                    "m_nIndex",
+                    prop => prop.Value = Program.ReplacedStateEventIds[prop.Value]);
+            }
+        }
+    }
+
     static class Util
     {
         public static void WriteProperty<T>(ExportEntry entry, string propertyName, Action<T> valueSetter)
@@ -710,6 +903,15 @@ namespace auto_patcher
             var outputLink = outputLinks[linkIdx];
 
             return outputLink;
+        }
+
+        public static void RelinkOutputLink(ExportEntry sourceNode, int outboundIdx, int linkIdx,
+            ExportEntry targetNode)
+        {
+            var outboundLinks = SeqTools.GetOutboundLinksOfNode(sourceNode);
+            var outboundLink = GetOutboundLink(outboundLinks, outboundIdx, linkIdx);
+            outboundLink.LinkedOp = targetNode;
+            SeqTools.WriteOutboundLinksToNode(sourceNode, outboundLinks);
         }
 
         public static void CopyAllSequenceObjects(
