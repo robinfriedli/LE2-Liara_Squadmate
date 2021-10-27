@@ -32,7 +32,8 @@ namespace auto_patcher
             "BioH_SelectGUI.pcc",
             "BioP_Exp1Lvl2.pcc",
             "BioP_Exp1Lvl3.pcc",
-            "BioP_Exp1Lvl4.pcc"
+            "BioP_Exp1Lvl4.pcc",
+            "BioH_Liara_00.pcc"
         };
 
         private static readonly Dictionary<string, Func<ExportEntry, List<ExportEntry>, RelevantSequence?>>
