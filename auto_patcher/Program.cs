@@ -33,7 +33,12 @@ namespace auto_patcher
             "BioP_Exp1Lvl2.pcc",
             "BioP_Exp1Lvl3.pcc",
             "BioP_Exp1Lvl4.pcc",
-            "BioH_Liara_00.pcc"
+            "BioH_Liara_00.pcc",
+            "BioD_Unc1Base2_01Narrative_LOC_DEU.pcc",
+            "BioD_Unc1Base2_01Narrative_LOC_FRA.pcc",
+            "BioD_Unc1Base2_01Narrative_LOC_INT.pcc",
+            "BioD_Unc1Base2_01Narrative_LOC_ITA.pcc",
+            "BioD_Unc1Base2_01Narrative_LOC_POL.pcc"
         };
 
         private static readonly Dictionary<string, Func<ExportEntry, List<ExportEntry>, RelevantSequence?>>
