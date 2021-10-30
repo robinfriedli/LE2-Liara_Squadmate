@@ -206,6 +206,41 @@ namespace auto_patcher
                 : null;
         }
 
+        public static IsTagHenchmanSequence? FindHenchmanGenderCheckSequence(
+            ExportEntry packageExport,
+            List<ExportEntry> sequenceObjects
+        )
+        {
+            var mysticFemaleCheck = sequenceObjects.Find(seqObj =>
+            {
+                var comments = seqObj.GetProperty<ArrayProperty<StrProperty>>("m_aObjComment");
+                if (comments == null || comments.IsEmpty())
+                {
+                    return false;
+                }
+
+                var comment = comments[0].Value;
+                if (!"Is *hench_mystic*?".Equals(comment))
+                {
+                    return false;
+                }
+
+                var outboundLinksOfNode = SeqTools.GetOutboundLinksOfNode(seqObj);
+                var outboundLink = Util.GetOutboundLink(outboundLinksOfNode, 0, 0, false);
+                if (outboundLink is not {LinkedOp: ExportEntry})
+                {
+                    return false;
+                }
+
+                var outputLabel = ((ExportEntry) outboundLink.LinkedOp).GetProperty<StrProperty>("OutputLabel");
+                return outputLabel is {Value: "Is Female"};
+            });
+
+            return mysticFemaleCheck != null
+                ? new IsTagHenchmanSequence(packageExport, sequenceObjects, mysticFemaleCheck)
+                : null;
+        }
+
         public override void HandleSequence(IMEPackage package)
         {
             var outboundLinksOfNode = SeqTools.GetOutboundLinksOfNode(KeySequenceObject);
@@ -458,7 +493,7 @@ namespace auto_patcher
         }
     }
 
-    class ReplacedStateTransitionsSequence : RelevantSequence
+    public class ReplacedStateTransitionsSequence : RelevantSequence
     {
         private List<ExportEntry> ReplacedStateTransitions { get; }
 

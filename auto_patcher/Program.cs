@@ -380,6 +380,18 @@ namespace auto_patcher
                     {
                         relevantSequences.Add(storeTheHenchmenInTheSquadSequence);
                     }
+                    else
+                    {
+                        // Some sequences check for the gender of the hench, which based on hench_mystic (Samara / Morinth)
+                        // counts asari as female. This sequence is very similar to the IsTag_Henchman sequence and can
+                        // be handled the same using the CompareName sequence object for hench_mystic as base.
+                        var henchmanGenderCheckSequence =
+                            IsTagHenchmanSequence.FindHenchmanGenderCheckSequence(packageExport, sequenceObjects);
+                        if (henchmanGenderCheckSequence != null)
+                        {
+                            relevantSequences.Add(henchmanGenderCheckSequence);
+                        }
+                    }
 
                     continue;
                 }
