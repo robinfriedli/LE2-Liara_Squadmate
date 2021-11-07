@@ -33,12 +33,22 @@ namespace auto_patcher
             "BioP_Exp1Lvl2.pcc",
             "BioP_Exp1Lvl3.pcc",
             "BioP_Exp1Lvl4.pcc",
+            "BioH_END_Liara_00.pcc",
             "BioH_Liara_00.pcc",
             "BioD_Unc1Base2_01Narrative_LOC_DEU.pcc",
             "BioD_Unc1Base2_01Narrative_LOC_FRA.pcc",
             "BioD_Unc1Base2_01Narrative_LOC_INT.pcc",
             "BioD_Unc1Base2_01Narrative_LOC_ITA.pcc",
-            "BioD_Unc1Base2_01Narrative_LOC_POL.pcc"
+            "BioD_Unc1Base2_01Narrative_LOC_POL.pcc",
+            "BioP_EndGm_StuntHench.pcc",
+            "BioP_EndGm1.pcc",
+            "BioD_EndGm1_310Huddle.pcc",
+            "BioD_EndGm2_200Factory.pcc",
+            "BioD_EndGm2_400FinalBattle.pcc",
+            "BioD_EndGm2_410HoldTheLine.pcc",
+            "BioD_EndGm2_430ReaperCombat.pcc",
+            "BioD_EndGm2_440CutsceneRoll.pcc",
+            "BioD_EndGm2_450ShepAlive.pcc"
         };
 
         private static readonly Dictionary<string, Func<ExportEntry, List<ExportEntry>, RelevantSequence?>>
