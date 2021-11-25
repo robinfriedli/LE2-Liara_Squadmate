@@ -4,12 +4,12 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using CommandLine;
+using LegendaryExplorerCore;
 using LegendaryExplorerCore.GameFilesystem;
 using LegendaryExplorerCore.Helpers;
 using LegendaryExplorerCore.Kismet;
 using LegendaryExplorerCore.Packages;
 using LegendaryExplorerCore.Unreal;
-using LegendaryExplorerCore.Unreal.ObjectInfo;
 
 namespace auto_patcher
 {
@@ -98,17 +98,9 @@ namespace auto_patcher
                 .WithParsed(RunWithOptions);
         }
 
-        static void InitLegendaryExplorer()
-        {
-            MEPackageHandler.Initialize();
-            LE2UnrealObjectInfo.loadfromJSON();
-            PackageSaver.Initialize();
-            PackageSaver.PackageSaveFailedCallback = s => { Console.WriteLine($"ERROR: Failed to save package, {s}"); };
-        }
-
         static void RunWithOptions(Options options)
         {
-            InitLegendaryExplorer();
+            LegendaryExplorerCoreLib.InitLib(null, s => { Console.WriteLine($"ERROR: Failed to save package, {s}"); });
 
             var outputDirName = options.OutputDir ?? ModPackageDir;
             if (!Directory.Exists(outputDirName))

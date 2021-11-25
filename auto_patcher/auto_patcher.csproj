@@ -10,9 +10,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="LegendaryExplorerCore, Culture=neutral, PublicKeyToken=null">
-      <HintPath>..\..\..\..\data\ExternalTools\Legendary Explorer (Nightly)\LegendaryExplorerCore.dll</HintPath>
-    </Reference>
+    <ProjectReference Include="..\LegendaryExplorer\LegendaryExplorer\LegendaryExplorerCore\LegendaryExplorerCore.csproj" />
   </ItemGroup>
 
 </Project>

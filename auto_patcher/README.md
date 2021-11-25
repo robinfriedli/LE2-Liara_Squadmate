@@ -28,16 +28,7 @@ Mod a single file: `auto_patcher.exe -f "<file location>" -v -d "<target dir>""`
 - replace `<file location>` with the path to the file to mod
 - and `<target dir>` with the target directory for the resulting file
 
-## Compile time dependencies
+## Dependencies
 
-Needs to link with the LegendaryExplorerCore.dll library for compilation. The file is expected to be found in
-`..\..\..\..\data\ExternalTools\Legendary Explorer (Nightly)\LegendaryExplorerCore.dll` relative to the mod directory,
-as the mod is expected to be installed in `ME3TweaksModManager\mods\LE2`, where it should be located if
-Legendary Explorer (Nightly) is installed (can be installed from the ME3Tweaks Mod Manager Tools menu). Other locations
-can be configured by changing the `<HintPath>` in `auto_patcher.csproj`.
-
-## Runtime dependencies
-
-For the program to run successfully the dynamic libraries in e.g.
-`ME3TweaksModManager\data\ExternalTools\Legendary Explorer (Nightly)\runtimes\win-x64\native` need to be included in
-the environment's path.
+References the LegendaryExplorerCore library from the LegendaryExplorer submodule, which takes care of loading required
+DLLs at runtime.
