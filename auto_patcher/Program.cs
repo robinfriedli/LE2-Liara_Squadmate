@@ -214,7 +214,7 @@ namespace auto_patcher
                 }
 
                 using var fs = new FileStream(sourceFile, FileMode.Open, FileAccess.Read);
-                var package = MEPackageHandler.OpenMEPackageFromStream(fs, sourceFile);
+                using var package = MEPackageHandler.OpenMEPackageFromStream(fs, sourceFile);
 
                 if (IsPackageRelevant(package))
                 {
@@ -271,8 +271,8 @@ namespace auto_patcher
         {
             foreach (var targetFile in targetFiles)
             {
-                var fs = new FileStream(targetFile, FileMode.Open, FileAccess.ReadWrite);
-                var package = MEPackageHandler.OpenMEPackageFromStream(fs, targetFile);
+                using var fs = new FileStream(targetFile, FileMode.Open, FileAccess.ReadWrite);
+                using var package = MEPackageHandler.OpenMEPackageFromStream(fs, targetFile);
                 fs.Close();
 
                 var relevantSequences = CollectRelevantSequences(package);
