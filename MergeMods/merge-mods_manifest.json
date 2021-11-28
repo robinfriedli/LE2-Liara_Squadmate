@@ -1,0 +1,16 @@
+{
+  "game": "LE2",
+  "files": [
+    {
+      "filename": "SFXGame.pcc",
+      "changes": [
+        {
+          "entryname": "BioSeqAct_SetPlotPartySize.Activated",
+          "scriptupdate": {
+            "scriptfilename": "BioSeqAct_SetPlotPartySize-Activated.uc"
+          }
+        }
+      ]
+    }
+  ]
+}
