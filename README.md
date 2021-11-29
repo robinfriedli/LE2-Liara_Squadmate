@@ -70,6 +70,7 @@ See Plot transitions / state events section.
      - Mod Handle_Party_Touch sequences to include Liara.
    - BioD_EndGm2_440CutsceneRoll.pcc
      - Mod sequence Kill_NonLoyalSquad to handle Liara as alive and set variable HENCH01_ALIVE or HENCH02_ALIVE in order to make sure Liara appears in the escape cutscene.
+     - Add Liara to Determine_Player_Ending sequence, only one other squadmate is required to survive to not get the bad ending if Liara is in the squad.
    - BioD_EndGm2_450ShepAlive.pcc
      - Add spawn handling for Liara to sequence Handle_ReactionScene_Saviour.
 
@@ -105,3 +106,8 @@ during LotSB, similar to how loyalty missions work.
 | 10932       | Set 10915 (WasInSquadLiara) to true                           |
 | 10933       | Expansion of 1910 (Was_In_Squad.Clear_all) that handles Liara |
 | 10934       | Expansion of 75 (In_Squad.Clear_Squad) that handles Liara     |
+
+## Merge mods
+
+The function `BioSeqAct_SetPlotPartySize.Activate` from SFXGame.pcc is modded via merge mod `MergeMods/merge-mods_manifest.json` to increment
+plot int 22 (Party_Size) for Liara if plot bool 6961 (InPartyLiara / Started_Car_Chase (LotSB)) is set.
