@@ -28,8 +28,8 @@ sequences automatically:
 
 Additionally, the tool also automatically replaces the following plot transition invocations:
 
- - 75 In_Squad.Clear_Squad is replaced by 10900304 to also clear Liara
- - 1910 Was_In_Squad.Clear_all is replaced by 10900303
+ - 75 In_Squad.Clear_Squad is replaced by 10934 to also clear Liara
+ - 1910 Was_In_Squad.Clear_all is replaced by 10933
  
 See Plot transitions / state events section.
 
@@ -75,7 +75,7 @@ See Plot transitions / state events section.
 
 ## Mod info
 
-The mod adds DLC `DLC_MOD_LiaraSquad` with mount priority 10900 and uses values in the range of 10900XXX for any new
+The mod adds DLC `DLC_MOD_LiaraSquad` with mount priority 10900 and uses values in the range of 109XX for any new
 plot variables, transitions, coniditionals etc.
 
 ## Plot variables
@@ -86,11 +86,11 @@ plot variables, transitions, coniditionals etc.
 | InPartyLiara       | 6961          | Started_Car_Chase (LotSB) |
 | IsSelectableLiara  | 6951          | End_Mission (LotSB)       |
 | IsLoyalLiara       | 6951          | End_Mission (LotSB)       |
-| IsSpecializedLiara | 10900102      | (new plot bool)           |
-| WasLoyalLiara      | 10900103      | (new plot bool)           |
+| IsSpecializedLiara | 10912         | (new plot bool)           |
+| WasLoyalLiara      | 10913         | (new plot bool)           |
 | KnowExistLiara     | 6961          | Started_Car_Chase (LotSB) |
-| AppearanceLiara    | 10900104      | (new plot int, unused)    |
-| WasInSquadLiara    | 10900105      | (new plot bool)           |
+| AppearanceLiara    | 10914         | (new plot int, unused)    |
+| WasInSquadLiara    | 10915         | (new plot bool)           |
 
 Started_Car_Chase is used for InPartyLiara and KnowExistLiara to make sure Liara appears in the squad selection screen
 during LotSB (there is a squad selection screen before reaching the Shadow Broker ship). Note that IsSelectableLiara is
@@ -101,7 +101,7 @@ during LotSB, similar to how loyalty missions work.
 
 | State Event | Desc                                                          |
 | ----------- | ------------------------------------------------------------- |
-| 10900301    | Set 6879 (LiaraInSquad) to true                               |
-| 10900302    | Set 10900105 (WasInSquadLiara) to true                        |
-| 10900303    | Expansion of 1910 (Was_In_Squad.Clear_all) that handles Liara |
-| 10900304    | Expansion of 75 (In_Squad.Clear_Squad) that handles Liara     |
+| 10931       | Set 6879 (LiaraInSquad) to true                               |
+| 10932       | Set 10915 (WasInSquadLiara) to true                           |
+| 10933       | Expansion of 1910 (Was_In_Squad.Clear_all) that handles Liara |
+| 10934       | Expansion of 75 (In_Squad.Clear_Squad) that handles Liara     |

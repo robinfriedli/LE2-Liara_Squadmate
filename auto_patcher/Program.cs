@@ -16,9 +16,9 @@ namespace auto_patcher
     class Program
     {
         public const int LiaraInSquadPlotId = 6879;
-        public const int LiaraWasInSquadPlotId = 10900105;
-        public const int LiaraInSquadPlotTransitionId = 10900301;
-        public const int LiaraWasInSquadPlotTransitionId = 10900302;
+        public const int LiaraWasInSquadPlotId = 10915;
+        public const int LiaraInSquadPlotTransitionId = 10931;
+        public const int LiaraWasInSquadPlotTransitionId = 10932;
         public const int LiaraHenchmanId = 14;
 
         const string ModPackageDir = "..\\DLC_MOD_LiaraSquad\\CookedPCConsole";
@@ -66,9 +66,9 @@ namespace auto_patcher
         public static readonly Dictionary<int, int> ReplacedStateEventIds = new()
         {
             // In_Squad.Clear_Squad
-            {75, 10900304},
+            {75, 10934},
             // Was_In_Squad.Clear_all
-            {1910, 10900303}
+            {1910, 10933}
         };
 
         public class Options
