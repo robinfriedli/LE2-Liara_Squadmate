@@ -1,8 +1,8 @@
-# LE2 Liara squad mate
+# LE2 Liara squadmate
 
-Mod that adds Liara from Lair of the Shadow Broker as a selectable squad mate to Mass Effect 2 in the Mass Effect Legendary Edition.
+Mod that adds Liara from Lair of the Shadow Broker as a selectable squadmate to Mass Effect 2 in the Mass Effect Legendary Edition.
 Uses LotSB both as recruitment and loyalty mission and enables Liara to be selected from the squad selection screen
-like any other ME2 squad mate, this includes the loadout selection and power level-up screen. As this uses Liara as
+like any other ME2 squadmate, this includes the loadout selection and power level-up screen. As this uses Liara as
 defined by LotSB it matches the DLC both in appearance and gameplay in terms of what loadouts and powers are available
 and how they function.
 
@@ -22,7 +22,7 @@ sequences automatically:
 
  - LookupHenchmanFromPlotManager: loads plot bool for squad selection and triggers spawns for selected members, call global hench spawn handling with hench ID 14 for Liara
  - IsTag_Henchman: determines whether the tag of an object represents a henchman / squad made, required in many places including cutscenes
- - Store_the_Henchmen_in_the_Squad: stores which squad mates were in the squad when temporarily clearing the squad, e.g. when getting in a hammerhead
+ - Store_the_Henchmen_in_the_Squad: stores which squadmates were in the squad when temporarily clearing the squad, e.g. when getting in a hammerhead
  - Retrieve_the_Henchmen_previously_in_the_Squad: retrieves the members stored by Store_the_Henchmen_in_the_Squad
  - The unnamed sequences that follow LookupHenchmanFromPlotManager to invoke plot transitions to set members in squad
 
@@ -45,9 +45,9 @@ See Plot transitions / state events section.
    - Mirror changes to `GUI_SF_TeamSelect` from `BioH_SelectGUI`.
    - Remove special handling for Liara from sequence `REF_Henchmen_PlaceOnceInMasterMap` and adjust `LookupHenchmanFromPlotManager` sequence analogous to rest of game to handle Liara globally instead.
  - BioH_Liara_00.pcc
-   - Adjust AddHenchmenToSquad RemoteEvent sequence to check whether Liara is actually in squad before adding to party analogous to other squad mates, was not required for LotSB.
+   - Adjust AddHenchmenToSquad RemoteEvent sequence to check whether Liara is actually in squad before adding to party analogous to other squadmates, was not required for LotSB.
  - BioH_END_Liara_00.pcc
-   - Based on BioH_Liara_00.pcc with special handling in spawn sequence for the suicide mission analogous to other squad mates.
+   - Based on BioH_Liara_00.pcc with special handling in spawn sequence for the suicide mission analogous to other squadmates.
  - Special cutscene in Overlord DLC on vulkan station: BioD_Unc1Base2_01Narrative_LOC_INT.pcc (and the other localised files)
    - Expand hench loadout and gesture logic for Liara based on hench_mystic (Samara / Morinth).
  - Suicide Mission:
