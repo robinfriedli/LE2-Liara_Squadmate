@@ -8,7 +8,7 @@ using LegendaryExplorerCore.Unreal;
 
 namespace auto_patcher
 {
-    public abstract class RelevantSequence
+    public abstract class RelevantSequence : IPackageHandler
     {
         public ExportEntry Sequence { get; }
         public List<ExportEntry> SequenceObjects { get; }
@@ -22,6 +22,16 @@ namespace auto_patcher
         }
 
         public abstract void HandleSequence(IMEPackage package);
+
+        public void HandlePackage(IMEPackage package)
+        {
+            HandleSequence(package);
+        }
+
+        public override string ToString()
+        {
+            return $"Sequence[{Sequence.ObjectName.Name}]";
+        }
     }
 
     public class LookupHenchmanFromPlotManagerSequence : RelevantSequence
@@ -252,11 +262,11 @@ namespace auto_patcher
             falseOutboundLink.LinkedOp = cmpNameLiara;
             SeqTools.WriteOutboundLinksToNode(KeySequenceObject, outboundLinksOfNode);
 
-            package.FindNameOrAdd("hench_liara");
+            package.FindNameOrAdd(Program.LiaraHenchTag);
             Util.WriteProperty<NameProperty>(
                 cmpNameLiara,
                 "ValueB",
-                prop => prop.Value = new NameReference("hench_liara")
+                prop => prop.Value = new NameReference(Program.LiaraHenchTag)
             );
 
             KismetHelper.AddObjectToSequence(cmpNameLiara, Sequence);

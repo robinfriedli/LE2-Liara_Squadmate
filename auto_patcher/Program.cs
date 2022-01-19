@@ -51,6 +51,24 @@ namespace auto_patcher
             "BioD_EndGm2_450ShepAlive.pcc"
         };
 
+        public const string LiaraHenchTag = "hench_liara";
+
+        public static readonly ISet<string> HenchTags = new HashSet<string>
+        {
+            "hench_vixen", // Miranda
+            "hench_leading", // Jacob
+            "hench_tali", // Tali
+            "hench_professor", // Mordin
+            "hench_mystic", // Samara / Morinth
+            "hench_assassin", // Thane
+            "hench_convict", // Jack
+            "hench_thief", // Kasumi
+            "hench_grunt", // Grunt
+            "hench_geth", // Legion
+            "hench_veteran", // Zaeed
+            "hench_garrus", // Garrus
+        };
+
         private static readonly Dictionary<string, Func<ExportEntry, List<ExportEntry>, RelevantSequence?>>
             RelevantSequenceMap = new()
             {
@@ -267,25 +285,25 @@ namespace auto_patcher
                 using var package = MEPackageHandler.OpenMEPackageFromStream(fs, targetFile);
                 fs.Close();
 
-                var relevantSequences = CollectRelevantSequences(package);
+                ScanPackage(package, true, out var collectedHandlers);
 
-                if (!relevantSequences.IsEmpty())
+                if (!collectedHandlers.IsEmpty())
                 {
-                    foreach (var relevantSequence in relevantSequences)
+                    foreach (var packageHandler in collectedHandlers)
                     {
                         try
                         {
-                            relevantSequence.HandleSequence(package);
+                            packageHandler.HandlePackage(package);
                             if (verbose)
                             {
                                 Console.WriteLine(
-                                    $"INFO: Handled sequence {relevantSequence.Sequence.ObjectName.Name} in file {targetFile}");
+                                    $"INFO: Handled {packageHandler} in file {targetFile}");
                             }
                         }
                         catch (SequenceStructureException e)
                         {
                             Console.WriteLine(
-                                $"ERROR: Failed to handle sequence {relevantSequence.Sequence.ObjectName.Name} in file {targetFile}: {e.Message}");
+                                $"ERROR: Failed to handle {packageHandler} in file {targetFile}: {e.Message}");
                         }
                     }
 
@@ -300,16 +318,33 @@ namespace auto_patcher
 
         static bool IsPackageRelevant(IMEPackage package)
         {
-            return !CollectRelevantSequences(package).IsEmpty();
+            return ScanPackage(package, false, out _);
         }
 
-        static List<RelevantSequence> CollectRelevantSequences(IMEPackage package)
+        static bool ScanPackage(IMEPackage package, bool collectHandlers, out List<IPackageHandler> collectedHandlers)
         {
-            var relevantSequences = new List<RelevantSequence>();
+            collectedHandlers = new List<IPackageHandler>();
             var foundLookupHenchmanFromPlotManager = false;
 
             foreach (var packageExport in package.Exports)
             {
+                if ("InterpGroup".Equals(packageExport.ClassName))
+                {
+                    var weaponEquipInterpGroup = WeaponEquipInterpGroup.CreateIfRelevant(package, packageExport);
+
+                    if (weaponEquipInterpGroup != null)
+                    {
+                        if (!collectHandlers)
+                        {
+                            return true;
+                        }
+
+                        collectedHandlers.Add(weaponEquipInterpGroup);
+                    }
+
+                    continue;
+                }
+
                 if (!"Sequence".Equals(packageExport.ClassName))
                 {
                     continue;
@@ -328,7 +363,12 @@ namespace auto_patcher
 
                     if (plotTransitionSequence != null)
                     {
-                        relevantSequences.Add(plotTransitionSequence);
+                        if (!collectHandlers)
+                        {
+                            return true;
+                        }
+
+                        collectedHandlers.Add(plotTransitionSequence);
                         continue;
                     }
                 }
@@ -360,7 +400,12 @@ namespace auto_patcher
 
                 if (!replacedStateTransitions.IsEmpty())
                 {
-                    relevantSequences.Add(
+                    if (!collectHandlers)
+                    {
+                        return true;
+                    }
+
+                    collectedHandlers.Add(
                         new ReplacedStateTransitionsSequence(
                             packageExport,
                             sequenceObjects,
@@ -380,7 +425,12 @@ namespace auto_patcher
                         StoreTheHenchmenInTheSquadSequence.GetFromUnnamedSequence(packageExport, sequenceObjects);
                     if (storeTheHenchmenInTheSquadSequence != null)
                     {
-                        relevantSequences.Add(storeTheHenchmenInTheSquadSequence);
+                        if (!collectHandlers)
+                        {
+                            return true;
+                        }
+
+                        collectedHandlers.Add(storeTheHenchmenInTheSquadSequence);
                     }
                     else
                     {
@@ -391,7 +441,12 @@ namespace auto_patcher
                             IsTagHenchmanSequence.FindHenchmanGenderCheckSequence(packageExport, sequenceObjects);
                         if (henchmanGenderCheckSequence != null)
                         {
-                            relevantSequences.Add(henchmanGenderCheckSequence);
+                            if (!collectHandlers)
+                            {
+                                return true;
+                            }
+
+                            collectedHandlers.Add(henchmanGenderCheckSequence);
                         }
                     }
 
@@ -405,12 +460,122 @@ namespace auto_patcher
 
                 if (relevantSequence != null)
                 {
-                    relevantSequences.Add(relevantSequence);
+                    if (!collectHandlers)
+                    {
+                        return true;
+                    }
+
+                    collectedHandlers.Add(relevantSequence);
                     foundLookupHenchmanFromPlotManager = objectName.Equals("LookupHenchmanFromPlotManager");
                 }
             }
 
-            return relevantSequences;
+            return false;
+        }
+    }
+
+    interface IPackageHandler
+    {
+        public void HandlePackage(IMEPackage package);
+    }
+
+    class WeaponEquipInterpGroup : IPackageHandler
+    {
+        private ExportEntry InterpGroup;
+        private ObjectProperty MysticTrackObjProp;
+
+        public WeaponEquipInterpGroup(ExportEntry interpGroup, ObjectProperty mysticTrackObjProp)
+        {
+            InterpGroup = interpGroup;
+            MysticTrackObjProp = mysticTrackObjProp;
+        }
+
+        public static WeaponEquipInterpGroup? CreateIfRelevant(IMEPackage package, ExportEntry packageExport)
+        {
+            var interpTracks = packageExport.GetProperty<ArrayProperty<ObjectProperty>>("InterpTracks");
+
+            if (interpTracks == null || interpTracks.Count < 12)
+            {
+                return null;
+            }
+
+            ObjectProperty? mysticTrackProp = null;
+            ISet<string> foundActorTags = new HashSet<string>();
+
+            foreach (var objProp in interpTracks)
+            {
+                var entry = objProp.ResolveToEntry(package);
+                if (entry is not ExportEntry track)
+                {
+                    continue;
+                }
+
+                var propKeys = track.GetProperty<ArrayProperty<StructProperty>>("m_aPropKeys");
+                if (propKeys == null || propKeys.IsEmpty() ||
+                    propKeys.Any(propKey => propKey.GetProp<ObjectProperty>("pWeaponClass") == null))
+                {
+                    continue;
+                }
+
+                var nameProperty = track.GetProperty<NameProperty>("m_nmFindActor");
+                if (nameProperty != null)
+                {
+                    var name = nameProperty.Value.Name;
+                    foundActorTags.Add(name);
+                    if ("hench_mystic".Equals(name))
+                    {
+                        mysticTrackProp = objProp;
+                    }
+                }
+            }
+
+            if (!Program.HenchTags.IsSubsetOf(foundActorTags) || foundActorTags.Contains(Program.LiaraHenchTag))
+            {
+                return null;
+            }
+
+            if (mysticTrackProp != null)
+            {
+                return new WeaponEquipInterpGroup(
+                    packageExport,
+                    mysticTrackProp
+                );
+            }
+
+            return null;
+        }
+
+        public void HandlePackage(IMEPackage package)
+        {
+            var liaraTrackObjProp = MysticTrackObjProp.DeepClone();
+            var mysticTrackProp = MysticTrackObjProp.ResolveToEntry(package);
+            var liaraTrackProp = (ExportEntry) mysticTrackProp.Clone(true);
+            package.AddExport(liaraTrackProp);
+            liaraTrackObjProp.Value = liaraTrackProp.UIndex;
+
+            package.FindNameOrAdd(Program.LiaraHenchTag);
+            Util.WriteProperty<NameProperty>(
+                liaraTrackProp,
+                "m_nmFindActor",
+                nameProp => nameProp.Value = new NameReference(Program.LiaraHenchTag)
+            );
+
+            Util.WriteProperty<StrProperty>(
+                liaraTrackProp,
+                "TrackTitle",
+                strProp => strProp.Value = "Prop -- hench_liara"
+            );
+
+            Util.WriteProperty<ArrayProperty<ObjectProperty>>(
+                InterpGroup,
+                "InterpTracks",
+                arr => arr.Add(liaraTrackObjProp)
+            );
+        }
+
+        public override string ToString()
+        {
+            return GetType().Name;
         }
     }
 
