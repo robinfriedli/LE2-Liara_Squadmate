@@ -330,7 +330,7 @@ namespace auto_patcher
             {
                 if ("InterpGroup".Equals(packageExport.ClassName))
                 {
-                    var weaponEquipInterpGroup = WeaponEquipInterpGroup.CreateIfRelevant(package, packageExport);
+                    var weaponEquipInterpGroup = TrackGestureInterpGroup.CreateIfRelevant(package, packageExport);
 
                     if (weaponEquipInterpGroup != null)
                     {
@@ -479,40 +479,33 @@ namespace auto_patcher
         public void HandlePackage(IMEPackage package);
     }
 
-    class WeaponEquipInterpGroup : IPackageHandler
+    class TrackGestureInterpGroup : IPackageHandler
     {
         private ExportEntry InterpGroup;
-        private ObjectProperty MysticTrackObjProp;
+        private ObjectProperty TemplateObjProp;
 
-        public WeaponEquipInterpGroup(ExportEntry interpGroup, ObjectProperty mysticTrackObjProp)
+        public TrackGestureInterpGroup(ExportEntry interpGroup, ObjectProperty templateObjProp)
         {
             InterpGroup = interpGroup;
-            MysticTrackObjProp = mysticTrackObjProp;
+            TemplateObjProp = templateObjProp;
         }
 
-        public static WeaponEquipInterpGroup? CreateIfRelevant(IMEPackage package, ExportEntry packageExport)
+        public static TrackGestureInterpGroup? CreateIfRelevant(IMEPackage package, ExportEntry packageExport)
         {
             var interpTracks = packageExport.GetProperty<ArrayProperty<ObjectProperty>>("InterpTracks");
 
-            if (interpTracks == null || interpTracks.Count < 12)
+            if (interpTracks == null || interpTracks.Count < 11)
             {
                 return null;
             }
 
-            ObjectProperty? mysticTrackProp = null;
+            ObjectProperty? templateTrackProp = null;
             ISet<string> foundActorTags = new HashSet<string>();
 
             foreach (var objProp in interpTracks)
             {
                 var entry = objProp.ResolveToEntry(package);
                 if (entry is not ExportEntry track)
-                {
-                    continue;
-                }
-
-                var propKeys = track.GetProperty<ArrayProperty<StructProperty>>("m_aPropKeys");
-                if (propKeys == null || propKeys.IsEmpty() ||
-                    propKeys.Any(propKey => propKey.GetProp<ObjectProperty>("pWeaponClass") == null))
                 {
                     continue;
                 }
@@ -524,21 +517,22 @@ namespace auto_patcher
                     foundActorTags.Add(name);
                     if ("hench_mystic".Equals(name))
                     {
-                        mysticTrackProp = objProp;
+                        templateTrackProp = objProp;
                     }
                 }
             }
 
-            if (!Program.HenchTags.IsSubsetOf(foundActorTags) || foundActorTags.Contains(Program.LiaraHenchTag))
+            if (templateTrackProp == null || foundActorTags.Contains(Program.LiaraHenchTag))
             {
                 return null;
             }
 
-            if (mysticTrackProp != null)
+            var foundHenchTags = Program.HenchTags.Intersect(foundActorTags);
+            if (foundHenchTags.Count() >= 11)
             {
-                return new WeaponEquipInterpGroup(
+                return new TrackGestureInterpGroup(
                     packageExport,
-                    mysticTrackProp
+                    templateTrackProp
                 );
             }
 
@@ -547,9 +541,9 @@ namespace auto_patcher
 
         public void HandlePackage(IMEPackage package)
         {
-            var liaraTrackObjProp = MysticTrackObjProp.DeepClone();
-            var mysticTrackProp = MysticTrackObjProp.ResolveToEntry(package);
-            var liaraTrackProp = (ExportEntry) mysticTrackProp.Clone(true);
+            var liaraTrackObjProp = TemplateObjProp.DeepClone();
+            var templateTrackProp = TemplateObjProp.ResolveToEntry(package);
+            var liaraTrackProp = (ExportEntry) templateTrackProp.Clone(true);
             package.AddExport(liaraTrackProp);
             liaraTrackObjProp.Value = liaraTrackProp.UIndex;
 
