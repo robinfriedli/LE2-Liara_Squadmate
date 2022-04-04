@@ -57,6 +57,24 @@ namespace auto_patcher
             return outputLink;
         }
 
+        public static void AddLinkToOutputLink(
+            ExportEntry sourceNode,
+            ExportEntry targetNode,
+            int outboundIdx
+        )
+        {
+            var outboundLinksOfNode = SeqTools.GetOutboundLinksOfNode(sourceNode);
+            var expectedSize = outboundIdx + 1;
+            if (outboundLinksOfNode.Count < expectedSize)
+            {
+                throw new SequenceStructureException($"Node does not have {expectedSize} outbound links");
+            }
+
+            var outboundLinks = outboundLinksOfNode[outboundIdx];
+            outboundLinks.Add(SeqTools.OutboundLink.FromTargetExport(targetNode, 0));
+            SeqTools.WriteOutboundLinksToNode(sourceNode, outboundLinksOfNode);
+        }
+
         public static void RelinkOutputLink(
             ExportEntry sourceNode,
             int outboundIdx,
@@ -128,6 +146,33 @@ namespace auto_patcher
                     SeqTools.WriteVariableLinksToNode(newSequenceObject, variableLinksOfNode);
                 }
             }
+        }
+
+        public static StructProperty CreateSeqVarLinkStruct(
+            int linkedUIdx,
+            string linkDesc,
+            int expectedType,
+            string propertyName,
+            int minVars,
+            int maxVars
+        )
+        {
+            var props = new PropertyCollection();
+            props.AddOrReplaceProp(new ArrayProperty<ObjectProperty>(
+                new[] {new ObjectProperty(linkedUIdx)},
+                new NameReference("LinkedVariables")
+            ));
+            props.AddOrReplaceProp(new StrProperty(linkDesc, new NameReference("LinkDesc")));
+            props.AddOrReplaceProp(new ObjectProperty(expectedType, new NameReference("ExpectedType")));
+            props.AddOrReplaceProp(new NameProperty(new NameReference("None"), new NameReference("LinkVar")));
+            props.AddOrReplaceProp(new NameProperty(new NameReference(propertyName),
+                new NameReference("PropertyName")));
+            props.AddOrReplaceProp(new IntProperty(minVars, new NameReference("MinVars")));
+            props.AddOrReplaceProp(new IntProperty(maxVars, new NameReference("MaxVars")));
+            props.AddOrReplaceProp(new BoolProperty(false, new NameReference("bWriteable")));
+            props.AddOrReplaceProp(new BoolProperty(false, new NameReference("bModifiesLinkedObject")));
+            props.AddOrReplaceProp(new BoolProperty(false, new NameReference("bAllowAnyType")));
+            return new StructProperty("SeqVarLink", props);
         }
     }
 }

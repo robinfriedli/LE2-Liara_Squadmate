@@ -81,6 +81,15 @@ namespace auto_patcher
                 }
             };
 
+        private static readonly Dictionary<string, IPackageHandler> PackageHandlers = new()
+        {
+            {"BioD_Nor", new BioDNorTriggerStreamsPackageHandler()},
+            {"BioP_Nor", new BioPNorStreamingKismetPackageHandler()},
+            {"BioD_Exp1Lvl5_100Stronghold", new StrongholdDeactivateLiaraPackageHandler()},
+            {"BioD_Exp1Lvl4_Stage2_Out", new InsertShowMessageActionPackageHandler(234, 375, 84, 10900006)},
+            {"BioD_Exp1Lvl5_200Cabin", new InsertShowMessageActionPackageHandler(566, 593, 554, 10900007)}
+        };
+
         public static readonly Dictionary<int, int> ReplacedStateEventIds = new()
         {
             // In_Squad.Clear_Squad
@@ -326,6 +335,17 @@ namespace auto_patcher
             collectedHandlers = new List<IPackageHandler>();
             var foundLookupHenchmanFromPlotManager = false;
 
+            PackageHandlers.TryGetValue(package.FileNameNoExtension, out var packageHandler);
+            if (packageHandler != null)
+            {
+                if (!collectHandlers)
+                {
+                    return true;
+                }
+
+                collectedHandlers.Add(packageHandler);
+            }
+
             foreach (var packageExport in package.Exports)
             {
                 if ("InterpGroup".Equals(packageExport.ClassName))
@@ -471,105 +491,6 @@ namespace auto_patcher
             }
 
             return false;
-        }
-    }
-
-    interface IPackageHandler
-    {
-        public void HandlePackage(IMEPackage package);
-    }
-
-    class TrackGestureInterpGroup : IPackageHandler
-    {
-        private ExportEntry InterpGroup;
-        private ObjectProperty TemplateObjProp;
-
-        public TrackGestureInterpGroup(ExportEntry interpGroup, ObjectProperty templateObjProp)
-        {
-            InterpGroup = interpGroup;
-            TemplateObjProp = templateObjProp;
-        }
-
-        public static TrackGestureInterpGroup? CreateIfRelevant(IMEPackage package, ExportEntry packageExport)
-        {
-            var interpTracks = packageExport.GetProperty<ArrayProperty<ObjectProperty>>("InterpTracks");
-
-            if (interpTracks == null || interpTracks.Count < 11)
-            {
-                return null;
-            }
-
-            ObjectProperty? templateTrackProp = null;
-            ISet<string> foundActorTags = new HashSet<string>();
-
-            foreach (var objProp in interpTracks)
-            {
-                var entry = objProp.ResolveToEntry(package);
-                if (entry is not ExportEntry track)
-                {
-                    continue;
-                }
-
-                var nameProperty = track.GetProperty<NameProperty>("m_nmFindActor");
-                if (nameProperty != null)
-                {
-                    var name = nameProperty.Value.Name;
-                    foundActorTags.Add(name);
-                    if ("hench_mystic".Equals(name))
-                    {
-                        templateTrackProp = objProp;
-                    }
-                }
-            }
-
-            if (templateTrackProp == null || foundActorTags.Contains(Program.LiaraHenchTag))
-            {
-                return null;
-            }
-
-            var foundHenchTags = Program.HenchTags.Intersect(foundActorTags);
-            if (foundHenchTags.Count() >= 11)
-            {
-                return new TrackGestureInterpGroup(
-                    packageExport,
-                    templateTrackProp
-                );
-            }
-
-            return null;
-        }
-
-        public void HandlePackage(IMEPackage package)
-        {
-            var liaraTrackObjProp = TemplateObjProp.DeepClone();
-            var templateTrackProp = TemplateObjProp.ResolveToEntry(package);
-            var liaraTrackProp = (ExportEntry) templateTrackProp.Clone(true);
-            package.AddExport(liaraTrackProp);
-            liaraTrackObjProp.Value = liaraTrackProp.UIndex;
-
-            package.FindNameOrAdd(Program.LiaraHenchTag);
-            Util.WriteProperty<NameProperty>(
-                liaraTrackProp,
-                "m_nmFindActor",
-                nameProp => nameProp.Value = new NameReference(Program.LiaraHenchTag)
-            );
-
-            Util.WriteProperty<StrProperty>(
-                liaraTrackProp,
-                "TrackTitle",
-                strProp => strProp.Value = "Prop -- hench_liara"
-            );
-
-            Util.WriteProperty<ArrayProperty<ObjectProperty>>(
-                InterpGroup,
-                "InterpTracks",
-                arr => arr.Add(liaraTrackObjProp)
-            );
-        }
-
-        public override string ToString()
-        {
-            return GetType().Name;
         }
     }
 
