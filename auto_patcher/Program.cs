@@ -10,6 +10,7 @@ using LegendaryExplorerCore.Helpers;
 using LegendaryExplorerCore.Kismet;
 using LegendaryExplorerCore.Packages;
 using LegendaryExplorerCore.Unreal;
+using LegendaryExplorerCore.Unreal.BinaryConverters;
 
 namespace auto_patcher
 {
@@ -28,20 +29,15 @@ namespace auto_patcher
         // these packages are modded manually
         private static readonly ISet<string> ExcludedPackages = new HashSet<string>
         {
-            "BioP_Global.pcc",
             "BioH_SelectGUI.pcc",
             "BioP_Exp1Lvl2.pcc",
             "BioP_Exp1Lvl3.pcc",
             "BioP_Exp1Lvl4.pcc",
-            "BioH_END_Liara_00.pcc",
-            "BioH_Liara_00.pcc",
             "BioD_Unc1Base2_01Narrative_LOC_DEU.pcc",
             "BioD_Unc1Base2_01Narrative_LOC_FRA.pcc",
             "BioD_Unc1Base2_01Narrative_LOC_INT.pcc",
             "BioD_Unc1Base2_01Narrative_LOC_ITA.pcc",
             "BioD_Unc1Base2_01Narrative_LOC_POL.pcc",
-            "BioP_EndGm_StuntHench.pcc",
-            "BioP_EndGm1.pcc",
             "BioD_EndGm1_310Huddle.pcc",
             "BioD_EndGm2_200Factory.pcc",
             "BioD_EndGm2_400FinalBattle.pcc",
@@ -87,7 +83,11 @@ namespace auto_patcher
             {"BioP_Nor", new BioPNorStreamingKismetPackageHandler()},
             {"BioD_Exp1Lvl5_100Stronghold", new StrongholdDeactivateLiaraPackageHandler()},
             {"BioD_Exp1Lvl4_Stage2_Out", new InsertShowMessageActionPackageHandler(234, 375, 84, 10900006)},
-            {"BioD_Exp1Lvl5_200Cabin", new InsertShowMessageActionPackageHandler(566, 593, 554, 10900007)}
+            {"BioD_Exp1Lvl5_200Cabin", new InsertShowMessageActionPackageHandler(566, 593, 554, 10900007)},
+            {"BioH_Liara_00", new BioHLiaraSpawnSequencePackageHandler()},
+            {"BioP_Global", new BioPGlobalPackageHandler()},
+            {"BioP_EndGm1", new BioPEndGm1TriggerStreamsPackageHandler()},
+            {"BioP_EndGm_StuntHench", new BioPEndGmStuntHenchPackageHandler()}
         };
 
         public static readonly Dictionary<int, int> ReplacedStateEventIds = new()
@@ -115,6 +115,11 @@ namespace auto_patcher
 
             [Option('v', "verbose", Required = false, HelpText = "Set output to verbose messages.")]
             public bool Verbose { get; set; }
+
+            [Option("bioh-end-only", Required = false,
+                HelpText =
+                    "Only generate the BioH_END_Liara_00 file based on the output dir's BioH_Liara_00 file. Ignores -f and -g.")]
+            public bool BioHEndOnly { get; set; }
         }
 
         static void Main(string[] args)
@@ -139,7 +144,12 @@ namespace auto_patcher
                 }
             }
 
-            if (options.InputFiles != null && !options.InputFiles.IsEmpty())
+            if (options.BioHEndOnly)
+            {
+                Console.WriteLine("INFO: Generating BioH_END_Liara_00");
+                GenerateBioHEndLiara(outputDirName);
+            }
+            else if (options.InputFiles != null && !options.InputFiles.IsEmpty())
             {
                 HandleSpecificFiles(options.InputFiles, options.Verbose, outputDirName);
             }
@@ -193,6 +203,8 @@ namespace auto_patcher
             var targetFiles = CollectAndCopyRelevantPackageFiles(filePaths, outputDirName);
             Console.WriteLine("INFO: Applying changes to files");
             HandleRelevantPackageFiles(targetFiles, verbose);
+            Console.WriteLine("INFO: Generating BioH_END_Liara_00");
+            GenerateBioHEndLiara(outputDirName);
             Console.WriteLine("Done");
         }
 
@@ -491,6 +503,177 @@ namespace auto_patcher
             }
 
             return false;
+        }
+
+        static void GenerateBioHEndLiara(string outputDirName)
+        {
+            var sourceFileName = Path.Join(outputDirName, "BioH_Liara_00.pcc");
+            if (!File.Exists(sourceFileName))
+            {
+                Console.WriteLine("ERROR: BioH_Liara_00 file not found in output dir");
+                return;
+            }
+
+            var destFileName = Path.Join(outputDirName, "BioH_END_Liara_00.pcc");
+            File.Copy(
+                sourceFileName,
+                destFileName,
+                true
+            );
+
+            using var fs = new FileStream(destFileName, FileMode.Open, FileAccess.ReadWrite);
+            using var package = MEPackageHandler.OpenMEPackageFromStream(fs, destFileName);
+            fs.Close();
+
+            var mainSequence = package.GetUExport(12908);
+            var mainSequenceProps = mainSequence.GetProperties();
+
+            var sequenceObjects = mainSequenceProps.GetProp<ArrayProperty<ObjectProperty>>("SequenceObjects");
+            foreach (var sequenceObject in sequenceObjects)
+            {
+                EntryPruner.TrashEntryAndDescendants(sequenceObject.ResolveToEntry(package));
+            }
+
+            sequenceObjects.Clear();
+            mainSequence.WriteProperties(mainSequenceProps);
+
+            var levelLoaded = SequenceObjectCreator.CreateSequenceObject(package, "SeqEvent_LevelLoaded");
+            KismetHelper.AddObjectToSequence(levelLoaded, mainSequence);
+
+            CreateEndGmLiaraTeleportSequence(package, mainSequence, levelLoaded);
+
+            package.FindNameOrAdd("RE_ENDGM_LOAD_LIARA");
+            package.FindNameOrAdd("RE_ENDGM_LOADED_LIARA");
+            package.FindNameOrAdd("RE_ENDGM_GETLOADED_STUNTHENCH");
+
+            var endGmLoadLiaraEvent = SequenceObjectCreator.CreateSequenceObject(package, "SeqEvent_RemoteEvent");
+            KismetHelper.AddObjectToSequence(endGmLoadLiaraEvent, mainSequence);
+            var endGmLoadLiaraEventProps = endGmLoadLiaraEvent.GetProperties();
+            endGmLoadLiaraEventProps.AddOrReplaceProp(new NameProperty("RE_ENDGM_LOAD_LIARA", "EventName"));
+            endGmLoadLiaraEventProps.RemoveNamedProperty("VariableLinks");
+            endGmLoadLiaraEvent.WriteProperties(endGmLoadLiaraEventProps);
+
+            var liaraPawnSeqVar = SequenceObjectCreator.CreateSequenceObject(package, "SeqVar_Object");
+            Util.WriteProperty<ObjectProperty>(
+                liaraPawnSeqVar,
+                "ObjValue",
+                prop => prop.Value = 13088
+            );
+            KismetHelper.AddObjectToSequence(liaraPawnSeqVar, mainSequence);
+
+            var activateEndGmLoadedLiara =
+                SequenceObjectCreator.CreateSequenceObject(package, "SeqAct_ActivateRemoteEvent");
+            KismetHelper.AddObjectToSequence(activateEndGmLoadedLiara, mainSequence);
+            var activateEndGmLoadedLiaraProps = activateEndGmLoadedLiara.GetProperties();
+            activateEndGmLoadedLiaraProps.AddOrReplaceProp(new NameProperty("RE_ENDGM_LOADED_LIARA", "EventName"));
+            activateEndGmLoadedLiara.WriteProperties(activateEndGmLoadedLiaraProps);
+            KismetHelper.CreateVariableLink(activateEndGmLoadedLiara, "Instigator", liaraPawnSeqVar);
+
+            Util.AddLinkToOutputLink(levelLoaded, activateEndGmLoadedLiara, 0);
+            Util.AddLinkToOutputLink(endGmLoadLiaraEvent, activateEndGmLoadedLiara, 0);
+
+            var endGmGetLoadedStuntHench = SequenceObjectCreator.CreateSequenceObject(package, "SeqEvent_RemoteEvent");
+            KismetHelper.AddObjectToSequence(endGmGetLoadedStuntHench, mainSequence);
+            var endGmGetLoadedStuntHenchProps = endGmGetLoadedStuntHench.GetProperties();
+            endGmGetLoadedStuntHenchProps.AddOrReplaceProp(new NameProperty("RE_ENDGM_GETLOADED_STUNTHENCH",
+                "EventName"));
+            endGmGetLoadedStuntHenchProps.RemoveNamedProperty("VariableLinks");
+            endGmGetLoadedStuntHench.WriteProperties(endGmGetLoadedStuntHenchProps);
+
+            var activateEndGmLoadedStuntHench =
+                SequenceObjectCreator.CreateSequenceObject(package, "SeqAct_ActivateRemoteEvent");
+            KismetHelper.AddObjectToSequence(activateEndGmLoadedStuntHench, mainSequence);
+            var activateEndGmLoadedStuntHenchProps = activateEndGmLoadedStuntHench.GetProperties();
+            activateEndGmLoadedStuntHenchProps.AddOrReplaceProp(new NameProperty("RE_ENDGM_LOADED_LIARA", "EventName"));
+            activateEndGmLoadedStuntHench.WriteProperties(activateEndGmLoadedStuntHenchProps);
+            KismetHelper.CreateVariableLink(activateEndGmLoadedStuntHench, "Instigator", liaraPawnSeqVar);
+
+            Util.AddLinkToOutputLink(endGmGetLoadedStuntHench, activateEndGmLoadedStuntHench, 0);
+
+            package.Save();
+        }
+
+        static void CreateEndGmLiaraTeleportSequence(IMEPackage package, ExportEntry mainSequence,
+            ExportEntry levelLoadedEvent)
+        {
+            var checkStateInfiltrationComplete =
+                SequenceObjectCreator.CreateSequenceObject(package, "BioSeqAct_PMCheckState");
+            KismetHelper.AddObjectToSequence(checkStateInfiltrationComplete, mainSequence);
+            KismetHelper.SetComment(checkStateInfiltrationComplete, "Infiltration Mission Completed?");
+            var checkStateInfiltrationCompleteProps = checkStateInfiltrationComplete.GetProperties();
+            checkStateInfiltrationCompleteProps.AddOrReplaceProp(new IntProperty(2941, new NameReference("m_nIndex")));
+            checkStateInfiltrationCompleteProps.RemoveNamedProperty("VariableLinks");
+            checkStateInfiltrationCompleteProps.RemoveNamedProperty("InputLinks");
+            checkStateInfiltrationComplete.WriteProperties(checkStateInfiltrationCompleteProps);
+
+            Util.AddLinkToOutputLink(levelLoadedEvent, checkStateInfiltrationComplete, 0);
+
+            var checkStateLongWalkStarted = (ExportEntry) ((IEntry) checkStateInfiltrationComplete).Clone(true);
+            KismetHelper.RemoveAllLinks(checkStateLongWalkStarted);
+            package.AddExport(checkStateLongWalkStarted);
+            KismetHelper.AddObjectToSequence(checkStateLongWalkStarted, mainSequence);
+            KismetHelper.SetComment(checkStateLongWalkStarted, "Long Walk Mission Started?");
+            Util.WriteProperty<IntProperty>(checkStateLongWalkStarted, "m_nIndex", prop => prop.Value = 2799);
+
+            Util.AddLinkToOutputLink(checkStateInfiltrationComplete, checkStateLongWalkStarted, 0);
+
+            var checkStateLongWalkFinished = (ExportEntry) ((IEntry) checkStateInfiltrationComplete).Clone(true);
+            KismetHelper.RemoveAllLinks(checkStateLongWalkFinished);
+            package.AddExport(checkStateLongWalkFinished);
+            KismetHelper.AddObjectToSequence(checkStateLongWalkFinished, mainSequence);
+            KismetHelper.SetComment(checkStateLongWalkFinished, "Long Walk Mission Completed?");
+            Util.WriteProperty<IntProperty>(checkStateLongWalkFinished, "m_nIndex", prop => prop.Value = 2944);
+
+            Util.AddLinkToOutputLink(checkStateLongWalkStarted, checkStateLongWalkFinished, 0);
+            Util.AddLinkToOutputLink(checkStateInfiltrationComplete, checkStateLongWalkFinished, 1);
+
+            var checkStateFinalBattleStarted = (ExportEntry) ((IEntry) checkStateInfiltrationComplete).Clone(true);
+            KismetHelper.RemoveAllLinks(checkStateFinalBattleStarted);
+            package.AddExport(checkStateFinalBattleStarted);
+            KismetHelper.AddObjectToSequence(checkStateFinalBattleStarted, mainSequence);
+            KismetHelper.SetComment(checkStateFinalBattleStarted, "Final Battle Mission Started?");
+            Util.WriteProperty<IntProperty>(checkStateFinalBattleStarted, "m_nIndex", prop => prop.Value = 3055);
+
+            Util.AddLinkToOutputLink(checkStateLongWalkFinished, checkStateFinalBattleStarted, 0);
+
+            var teleportHuddle02 = SequenceObjectCreator.CreateSequenceObject(package, "SeqAct_Teleport");
+            KismetHelper.AddObjectToSequence(teleportHuddle02, mainSequence);
+            KismetHelper.SetComment(teleportHuddle02, "In endgm2 Huddle 02");
+
+            var liaraPawnSeqVar = SequenceObjectCreator.CreateSequenceObject(package, "SeqVar_Object");
+            Util.WriteProperty<ObjectProperty>(
+                liaraPawnSeqVar,
+                "ObjValue",
+                prop => prop.Value = 13088
+            );
+            KismetHelper.AddObjectToSequence(liaraPawnSeqVar, mainSequence);
+
+            KismetHelper.CreateVariableLink(teleportHuddle02, "Target", liaraPawnSeqVar);
+
+            var wpFactoryLiara = SequenceObjectCreator.CreateSequenceObject(package, "BioSeqVar_ObjectFindByTag");
+            KismetHelper.AddObjectToSequence(wpFactoryLiara, mainSequence);
+            var wpFactoryLiaraProps = wpFactoryLiara.GetProperties();
+            wpFactoryLiaraProps.AddOrReplaceProp(new StrProperty("wp_Factory_Liara",
+                new NameReference("m_sObjectTagToFind")));
+            wpFactoryLiara.WriteProperties(wpFactoryLiaraProps);
+
+            KismetHelper.CreateVariableLink(teleportHuddle02, "Destination", wpFactoryLiara);
+
+            Util.AddLinkToOutputLink(checkStateLongWalkStarted, teleportHuddle02, 1);
+
+            var wpFinalLiara = SequenceObjectCreator.CreateSequenceObject(package, "BioSeqVar_ObjectFindByTag");
+            KismetHelper.AddObjectToSequence(wpFinalLiara, mainSequence);
+            var wpFinalLiaraProps = wpFinalLiara.GetProperties();
+            wpFinalLiaraProps.AddOrReplaceProp(new StrProperty("wp_Final_Liara",
+                new NameReference("m_sObjectTagToFind")));
+            wpFinalLiara.WriteProperties(wpFinalLiaraProps);
+
+            var teleportHuddle03 = SequenceObjectCreator.CreateSequenceObject(package, "SeqAct_Teleport");
+            KismetHelper.AddObjectToSequence(teleportHuddle03, mainSequence);
+            KismetHelper.SetComment(teleportHuddle03, "In endgm2 Huddle 03");
+            KismetHelper.CreateVariableLink(teleportHuddle03, "Target", liaraPawnSeqVar);
+            KismetHelper.CreateVariableLink(teleportHuddle03, "Destination", wpFinalLiara);
+            Util.AddLinkToOutputLink(checkStateFinalBattleStarted, teleportHuddle03, 1);
         }
     }
 

@@ -182,15 +182,7 @@ namespace auto_patcher
         {
             package.FindNameOrAdd("BioD_Nor_109Liara");
 
-            if (!package.TryGetUExport(705, out var bioWorldInfo))
-            {
-                bioWorldInfo = package.Exports.FirstOrDefault(export => "BioWorldInfo".Equals(export.ClassName));
-            }
-
-            if (bioWorldInfo == null)
-            {
-                return;
-            }
+            var bioWorldInfo = package.GetUExport(705);
 
             var props = bioWorldInfo.GetProperties();
             var streamingLevelsProperty = props.GetProp<ArrayProperty<ObjectProperty>>("StreamingLevels");
@@ -199,28 +191,7 @@ namespace auto_patcher
                 return;
             }
 
-            if (!package.TryGetUExport(806, out var firstStreamingKismet)
-                || !"LevelStreamingKismet".Equals(firstStreamingKismet.ClassName))
-            {
-                firstStreamingKismet = streamingLevelsProperty
-                    .Select(obj => !package.TryGetUExport(obj.Value, out var kismetObject) ? null : kismetObject)
-                    .Where(entry =>
-                    {
-                        if (entry == null)
-                        {
-                            return false;
-                        }
-
-                        var linkedExport = package.GetUExport(entry.idxLink);
-                        return linkedExport != null && "PersistentLevel".Equals(linkedExport.ObjectName.Name);
-                    })
-                    .FirstOrDefault();
-            }
-
-            if (firstStreamingKismet == null)
-            {
-                return;
-            }
+            var firstStreamingKismet = package.GetUExport(806);
 
             var newStreamingKismet = (ExportEntry) ((IEntry) firstStreamingKismet).Clone(true);
             package.AddExport(newStreamingKismet);
@@ -245,15 +216,8 @@ namespace auto_patcher
 
         public void HandlePackage(IMEPackage package)
         {
-            if (!package.TryGetUExport(3436, out var levelLoadedEvent))
-            {
-                return;
-            }
-
-            if (!package.TryGetUExport(3671, out var sequence))
-            {
-                return;
-            }
+            var levelLoadedEvent = package.GetUExport(3436);
+            var sequence = package.GetUExport(3671);
 
             var checkState = SequenceObjectCreator.CreateSequenceObject(package, "BioSeqAct_PMCheckState");
             KismetHelper.AddObjectToSequence(checkState, sequence);
@@ -351,20 +315,9 @@ namespace auto_patcher
 
         public void HandlePackage(IMEPackage package)
         {
-            if (!package.TryGetUExport(PrevExportUIdx, out var prevExport))
-            {
-                return;
-            }
-
-            if (!package.TryGetUExport(NextExportUIdx, out var nextExport))
-            {
-                return;
-            }
-
-            if (!package.TryGetUExport(SequenceExportUIdx, out var sequence))
-            {
-                return;
-            }
+            var prevExport = package.GetUExport(PrevExportUIdx);
+            var nextExport = package.GetUExport(NextExportUIdx);
+            var sequence = package.GetUExport(SequenceExportUIdx);
 
             package.FindNameOrAdd("srText");
             package.FindNameOrAdd("srAButton");
@@ -413,6 +366,353 @@ namespace auto_patcher
             msgStrRefProps.AddOrReplaceProp(new StringRefProperty(strIdx, new NameReference("m_srValue")));
             msgStrRef.WriteProperties(msgStrRefProps);
             return msgStrRef;
+        }
+    }
+
+    class BioHLiaraSpawnSequencePackageHandler : IPackageHandler
+    {
+        public override string ToString()
+        {
+            return GetType().Name;
+        }
+
+        public void HandlePackage(IMEPackage package)
+        {
+            var levelLoaded = package.GetUExport(12906);
+            var remoteEvent = package.GetUExport(12907);
+            var log = package.GetUExport(12905);
+            var sequence = package.GetUExport(12908);
+
+            var checkState = SequenceObjectCreator.CreateSequenceObject(package, "BioSeqAct_PMCheckState");
+            KismetHelper.AddObjectToSequence(checkState, sequence);
+            var checkStateProps = checkState.GetProperties();
+            checkStateProps.AddOrReplaceProp(new IntProperty(6879, new NameReference("m_nIndex")));
+            checkStateProps.RemoveNamedProperty("VariableLinks");
+            checkState.WriteProperties(checkStateProps);
+
+            Util.AddLinkToOutputLink(checkState, log, 0);
+            Util.RelinkOutputLink(levelLoaded, 0, 0, checkState);
+            Util.RelinkOutputLink(remoteEvent, 0, 0, checkState);
+        }
+    }
+
+    class BioPGlobalPackageHandler : IPackageHandler
+    {
+        public override string ToString()
+        {
+            return GetType().Name;
+        }
+
+        public void HandlePackage(IMEPackage package)
+        {
+            package.FindNameOrAdd("stream_liara_00");
+            package.FindNameOrAdd("BioH_Liara");
+            package.FindNameOrAdd("BioH_Liara_00");
+
+            var spawnHenchmen0CreateHenchmenActivated = HandleCreateHenchmenSequence(package, 214, 169);
+            HandleSpawnHenchmanSequence(package, 174, 214, spawnHenchmen0CreateHenchmenActivated);
+            var spawnHenchmen1CreateHenchmenActivated = HandleCreateHenchmenSequence(package, 216, 171);
+            HandleSpawnHenchmanSequence(package, 175, 216, spawnHenchmen1CreateHenchmenActivated);
+
+            // handle DespawnHenchmen sequence
+            var despawnHenchmenSequence = package.GetUExport(212);
+            var despawnHenchmenFinishSequence = package.GetUExport(168);
+            var despawnHenchmenPrevSetState = SeqTools
+                .GetAllSequenceElements(despawnHenchmenSequence)
+                .Where(entry =>
+                    entry is ExportEntry
+                    && Util.GetOutboundLink(
+                        SeqTools.GetOutboundLinksOfNode((ExportEntry) entry), 0, 0, false
+                    )?.LinkedOp.UIndex == 168
+                )
+                .Select(entry => (ExportEntry) entry)
+                .FirstOrDefault();
+            if (despawnHenchmenPrevSetState == null)
+            {
+                throw new SequenceStructureException("No sequence object has FinishSequence export as output link");
+            }
+
+            var despawnHenchmenLiara =
+                SequenceObjectCreator.CreateSequenceObject(package, "BioSeqAct_SetStreamingState");
+            KismetHelper.AddObjectToSequence(despawnHenchmenLiara, despawnHenchmenSequence);
+            var despawnHenchmenLiaraProps = despawnHenchmenLiara.GetProperties();
+            despawnHenchmenLiaraProps.RemoveNamedProperty("VariableLinks");
+            despawnHenchmenLiaraProps.AddOrReplaceProp(new NameProperty(new NameReference("stream_liara_00"),
+                new NameReference("StateName")));
+            despawnHenchmenLiara.WriteProperties(despawnHenchmenLiaraProps);
+            Util.RelinkOutputLink(despawnHenchmenPrevSetState, 0, 0, despawnHenchmenLiara);
+            Util.AddLinkToOutputLink(despawnHenchmenLiara, despawnHenchmenFinishSequence, 0);
+
+            var bioWorldInfo = package.GetUExport(110);
+            var bioWorldInfoProps = bioWorldInfo.GetProperties();
+            var plotStreamingArr = bioWorldInfoProps.GetProp<ArrayProperty<StructProperty>>("PlotStreaming");
+            var liaraPlotStreamingElementProps = new PropertyCollection();
+            liaraPlotStreamingElementProps.AddOrReplaceProp(new NameProperty(new NameReference("BioH_Liara_00"),
+                new NameReference("ChunkName")));
+            liaraPlotStreamingElementProps.AddOrReplaceProp(new BoolProperty(true, new NameReference("bFallback")));
+            var liaraPlotStreamingSetProps = new PropertyCollection();
+            liaraPlotStreamingSetProps.AddOrReplaceProp(new ArrayProperty<StructProperty>(
+                new[] {new StructProperty("PlotStreamingElement", liaraPlotStreamingElementProps)},
+                new NameReference("Elements")
+            ));
+            liaraPlotStreamingSetProps.AddOrReplaceProp(new NameProperty(new NameReference("BioH_Liara"),
+                new NameReference("VirtualChunkName")));
+            plotStreamingArr.Add(new StructProperty("PlotStreamingSet", liaraPlotStreamingSetProps));
+            bioWorldInfo.WriteProperties(bioWorldInfoProps);
+        }
+
+        private static ExportEntry HandleCreateHenchmenSequence(
+            IMEPackage package,
+            int createHenchmenSequenceUIdx,
+            int finishSequenceUIdx
+        )
+        {
+            var createHenchmenSequence = package.GetUExport(createHenchmenSequenceUIdx);
+            var finishSequence = package.GetUExport(finishSequenceUIdx);
+
+            var sequenceActivated = SequenceObjectCreator.CreateSequenceObject(package, "SeqEvent_SequenceActivated");
+            KismetHelper.AddObjectToSequence(sequenceActivated, createHenchmenSequence);
+            var sequenceActivatedProps = sequenceActivated.GetProperties();
+            sequenceActivatedProps.AddOrReplaceProp(new StrProperty("Liara", new NameReference("Liara")));
+            sequenceActivatedProps.RemoveNamedProperty("VariableLinks");
+            sequenceActivated.WriteProperties(sequenceActivatedProps);
+
+            var setStreamingState = SequenceObjectCreator.CreateSequenceObject(package, "BioSeqAct_SetStreamingState");
+            KismetHelper.AddObjectToSequence(setStreamingState, createHenchmenSequence);
+            var setStreamingStateProps = setStreamingState.GetProperties();
+            setStreamingStateProps.AddOrReplaceProp(new NameProperty(new NameReference("stream_liara_00"),
+                new NameReference("StateName")));
+            setStreamingStateProps.AddOrReplaceProp(new BoolProperty(true, new NameReference("NewValue")));
+            setStreamingStateProps.RemoveNamedProperty("VariableLinks");
+            setStreamingState.WriteProperties(setStreamingStateProps);
+
+            var executeTransition =
+                SequenceObjectCreator.CreateSequenceObject(package, "BioSeqAct_PMExecuteTransition");
+            KismetHelper.AddObjectToSequence(executeTransition, createHenchmenSequence);
+            KismetHelper.SetComment(executeTransition, "Add Liara");
+            var executeTransitionProps = executeTransition.GetProperties();
+            executeTransitionProps.RemoveNamedProperty("VariableLinks");
+            executeTransitionProps.AddOrReplaceProp(new EnumProperty(
+                new NameReference("None"),
+                new NameReference("EBioAutoSet"),
+                MEGame.LE2,
+                new NameReference("Transition")
+            ));
+            executeTransitionProps.AddOrReplaceProp(new IntProperty(10931, new NameReference("m_nIndex")));
+            executeTransitionProps.AddOrReplaceProp(new IntProperty(-1, new NameReference("m_nPrevRegionIndex")));
+            executeTransitionProps.AddOrReplaceProp(new IntProperty(-1, new NameReference("m_nPrevPlotIndex")));
+            executeTransitionProps.AddOrReplaceProp(new EnumProperty(
+                new NameReference("None"),
+                new NameReference("EBioRegionAutoSet"),
+                MEGame.LE2,
+                new NameReference("Region")
+            ));
+            executeTransitionProps.AddOrReplaceProp(new EnumProperty(
+                new NameReference("None"),
+                new NameReference("EBioPlotAutoSet"),
+                MEGame.LE2,
+                new NameReference("Plot")
+            ));
+            executeTransition.WriteProperties(executeTransitionProps);
+
+            Util.AddLinkToOutputLink(sequenceActivated, setStreamingState, 0);
+            Util.AddLinkToOutputLink(setStreamingState, executeTransition, 0);
+            Util.AddLinkToOutputLink(executeTransition, finishSequence, 0);
+
+            return sequenceActivated;
+        }
+
+        private static void HandleSpawnHenchmanSequence(
+            IMEPackage package,
+            int switchExportUIdx,
+            int createHenchmenSequenceUIdx,
+            ExportEntry createHenchmenSequenceActivated
+        )
+        {
+            var switchExport = package.GetUExport(switchExportUIdx);
+            var createHenchmenSequenceExport = package.GetUExport(createHenchmenSequenceUIdx);
+            var switchExportProps = switchExport.GetProperties();
+            switchExportProps.GetProp<IntProperty>("LinkCount").Value = 15;
+            var switchExportOutputLinks = switchExportProps.GetProp<ArrayProperty<StructProperty>>("OutputLinks");
+
+            var liaraOutputInputLinkProps = new PropertyCollection();
+            liaraOutputInputLinkProps.AddOrReplaceProp(new ObjectProperty(createHenchmenSequenceExport,
+                new NameReference("LinkedOp")));
+            liaraOutputInputLinkProps.AddOrReplaceProp(new IntProperty(13, new NameReference("InputLinkIdx")));
+            var liaraOutputLinkProps = new PropertyCollection();
+            liaraOutputLinkProps.AddOrReplaceProp(new ArrayProperty<StructProperty>(
+                new[] {new StructProperty("SeqOpOutputInputLink", liaraOutputInputLinkProps)},
+                new NameReference("Links")
+            ));
+            liaraOutputLinkProps.AddOrReplaceProp(new StrProperty("Link 15", new NameReference("LinkDesc")));
+            liaraOutputLinkProps.AddOrReplaceProp(new NameProperty(new NameReference("None"),
+                new NameReference("LinkAction")));
+            liaraOutputLinkProps.AddOrReplaceProp(new ObjectProperty(0, new NameReference("LinkedOp")));
+            liaraOutputLinkProps.AddOrReplaceProp(new FloatProperty(0, new NameReference("ActivateDelay")));
+            liaraOutputLinkProps.AddOrReplaceProp(new BoolProperty(false, new NameReference("bHasImpulse")));
+            liaraOutputLinkProps.AddOrReplaceProp(new BoolProperty(false, new NameReference("bDisabled")));
+            switchExportOutputLinks.Add(new StructProperty("SeqOpOutputLink", liaraOutputLinkProps));
+            switchExport.WriteProperties(switchExportProps);
+
+            var createHenchmenSequenceExportProps = createHenchmenSequenceExport.GetProperties();
+            var createHenchmenSequenceInputLinks =
+                createHenchmenSequenceExportProps.GetProp<ArrayProperty<StructProperty>>("InputLinks");
+            var createHenchmenSequenceInputLinkProps = new PropertyCollection();
+            createHenchmenSequenceInputLinkProps.AddOrReplaceProp(new StrProperty("Liara",
+                new NameReference("LinkDesc")));
+            createHenchmenSequenceInputLinkProps.AddOrReplaceProp(
+                new NameProperty(createHenchmenSequenceActivated.ObjectName, new NameReference("LinkAction")));
+            createHenchmenSequenceInputLinkProps.AddOrReplaceProp(new ObjectProperty(createHenchmenSequenceActivated,
+                new NameReference("LinkedOp")));
+            createHenchmenSequenceInputLinkProps.AddOrReplaceProp(new IntProperty(0,
+                new NameReference("QueuedActivations")));
+            createHenchmenSequenceInputLinkProps.AddOrReplaceProp(new FloatProperty(0,
+                new NameReference("ActivateDelay")));
+            createHenchmenSequenceInputLinkProps.AddOrReplaceProp(
+                new BoolProperty(false, new NameReference("bHasImpulse")));
+            createHenchmenSequenceInputLinkProps.AddOrReplaceProp(new BoolProperty(false,
+                new NameReference("bDisabled")));
+            createHenchmenSequenceInputLinks.Add(new StructProperty("SeqOpInputLink",
+                createHenchmenSequenceInputLinkProps));
+            createHenchmenSequenceExport.WriteProperties(createHenchmenSequenceExportProps);
+        }
+    }
+
+    class BioPEndGm1TriggerStreamsPackageHandler : IPackageHandler
+    {
+        public override string ToString()
+        {
+            return GetType().Name;
+        }
+
+        public void HandlePackage(IMEPackage package)
+        {
+            package.FindNameOrAdd("stream_liara");
+            HandleTriggerStream(package, 1535);
+            HandleTriggerStream(package, 1536);
+        }
+
+        private static void HandleTriggerStream(IMEPackage package, int triggerStreamUIdx)
+        {
+            var triggerStream = package.GetUExport(triggerStreamUIdx);
+            var triggerStreamProps = triggerStream.GetProperties();
+            var streamingStates = triggerStreamProps.GetProp<ArrayProperty<StructProperty>>("StreamingStates");
+            var liaraStreamingStateProps = new PropertyCollection();
+            liaraStreamingStateProps.AddOrReplaceProp(new ArrayProperty<StructProperty>(new StructProperty[] { },
+                new NameReference("VisibleChunkNames")));
+            liaraStreamingStateProps.AddOrReplaceProp(new ArrayProperty<StructProperty>(new StructProperty[] { },
+                new NameReference("VisibleSoonChunkNames")));
+            liaraStreamingStateProps.AddOrReplaceProp(
+                new ArrayProperty<StructProperty>(new StructProperty[] { }, new NameReference("LoadChunkNames")));
+            liaraStreamingStateProps.AddOrReplaceProp(new NameProperty(new NameReference("stream_liara"),
+                new NameReference("StateName")));
+            liaraStreamingStateProps.AddOrReplaceProp(new NameProperty(new NameReference("None"),
+                new NameReference("InChunkName")));
+            liaraStreamingStateProps.AddOrReplaceProp(new FloatProperty(0, new NameReference("DesignFudget")));
+            liaraStreamingStateProps.AddOrReplaceProp(new FloatProperty(0, new NameReference("ArtFudget")));
+            streamingStates.Add(new StructProperty("BioStreamingState", liaraStreamingStateProps));
+            triggerStream.WriteProperties(triggerStreamProps);
+        }
+    }
+
+    class BioPEndGmStuntHenchPackageHandler : IPackageHandler
+    {
+        public override string ToString()
+        {
+            return GetType().Name;
+        }
+
+        public void HandlePackage(IMEPackage package)
+        {
+            package.FindNameOrAdd("load_end_liara");
+            package.FindNameOrAdd("visible_end_liara");
+            package.FindNameOrAdd("stream_trig_liara");
+            package.FindNameOrAdd("BioH_END_Liara");
+            package.FindNameOrAdd("BioH_END_Liara_00");
+
+            AddLiaraTriggerStream(package);
+
+            var levelStreamingKismet = (ExportEntry) ((IEntry) package.GetUExport(33)).Clone(true);
+            package.AddExport(levelStreamingKismet);
+            Util.WriteProperty<NameProperty>(levelStreamingKismet, "PackageName",
+                prop => prop.Value = new NameReference("BioH_END_Liara_00"));
+
+            var bioWorldInfo = package.GetUExport(16);
+            var bioWorldInfoProps = bioWorldInfo.GetProperties();
+            var plotStreamingElements = bioWorldInfoProps.GetProp<ArrayProperty<StructProperty>>("PlotStreaming");
+            var liaraPlotStreamingElementProps = new PropertyCollection();
+            liaraPlotStreamingElementProps.AddOrReplaceProp(new NameProperty(new NameReference("BioH_END_Liara_00"),
+                new NameReference("ChunkName")));
+            liaraPlotStreamingElementProps.AddOrReplaceProp(new BoolProperty(true, new NameReference("bFallback")));
+            var liaraPlotStreamingSetProps = new PropertyCollection();
+            liaraPlotStreamingSetProps.AddOrReplaceProp(new ArrayProperty<StructProperty>(
+                new[] {new StructProperty("PlotStreamingElement", liaraPlotStreamingElementProps)},
+                new NameReference("Elements")
+            ));
+            liaraPlotStreamingSetProps.AddOrReplaceProp(new NameProperty(new NameReference("BioH_END_Liara"),
+                new NameReference("VirtualChunkName")));
+            plotStreamingElements.Add(new StructProperty("PlotStreamingSet", liaraPlotStreamingSetProps));
+
+            var streamingLevels = bioWorldInfoProps.GetProp<ArrayProperty<ObjectProperty>>("StreamingLevels");
+            streamingLevels.Add(new ObjectProperty(levelStreamingKismet));
+
+            bioWorldInfo.WriteProperties(bioWorldInfoProps);
+        }
+
+        private static void AddLiaraTriggerStream(IMEPackage package)
+        {
+            var triggerStream = (ExportEntry) ((IEntry) package.GetUExport(2)).Clone(true);
+            package.AddExport(triggerStream);
+            var triggerStreamProps = triggerStream.GetProperties();
+            var streamingStates = triggerStreamProps.GetProp<ArrayProperty<StructProperty>>("StreamingStates");
+
+            foreach (var streamingState in streamingStates)
+            {
+                var stateName = streamingState.GetProp<NameProperty>("StateName");
+                if (stateName == null)
+                {
+                    continue;
+                }
+
+                var visibleChunkNames = streamingState.GetProp<ArrayProperty<NameProperty>>("VisibleChunkNames");
+                var loadChunkNames = streamingState.GetProp<ArrayProperty<NameProperty>>("LoadChunkNames");
+                var visibleSoonChunkNames =
+                    streamingState.GetProp<ArrayProperty<NameProperty>>("VisibleSoonChunkNames");
+                visibleChunkNames.Clear();
+                loadChunkNames.Clear();
+                visibleSoonChunkNames?.Clear();
+
+                if (stateName.Value.Name.StartsWith("load_end_"))
+                {
+                    stateName.Value = new NameReference("load_end_liara");
+                    loadChunkNames.Add(new NameProperty(new NameReference("BioH_END_Liara")));
+                }
+                else if (stateName.Value.Name.StartsWith("visible_end_"))
+                {
+                    stateName.Value = new NameReference("visible_end_liara");
+                    visibleChunkNames.Add(new NameProperty(new NameReference("BioH_END_Liara")));
+                }
+            }
+
+            var prevBrushComponent =
+                package.GetUExport(triggerStreamProps.GetProp<ObjectProperty>("BrushComponent").Value);
+            var brushComponent = (ExportEntry) ((IEntry) prevBrushComponent).Clone(true);
+            package.AddExport(brushComponent);
+            brushComponent.idxLink = triggerStream.UIndex;
+
+            triggerStreamProps.AddOrReplaceProp(new ObjectProperty(brushComponent,
+                new NameReference("BrushComponent")));
+            triggerStreamProps.AddOrReplaceProp(new ObjectProperty(brushComponent,
+                new NameReference("CollisionComponent")));
+            triggerStreamProps.AddOrReplaceProp(new NameProperty(new NameReference("stream_trig_liara"),
+                new NameReference("Tag")));
+            var location = triggerStreamProps.GetProp<StructProperty>("Location");
+            location.GetProp<FloatProperty>("X").Value = 260069.78f;
+            location.GetProp<FloatProperty>("Y").Value = -261397.88f;
+            location.GetProp<FloatProperty>("Z").Value = -96f;
+            triggerStream.WriteProperties(triggerStreamProps);
+
+            package.AddToLevelActorsIfNotThere(triggerStream);
         }
     }
 }
