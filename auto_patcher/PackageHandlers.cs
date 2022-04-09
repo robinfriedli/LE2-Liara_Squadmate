@@ -715,4 +715,93 @@ namespace auto_patcher
             package.AddToLevelActorsIfNotThere(triggerStream);
         }
     }
+
+    class BioDEndGm2300ConclusionPackageHandler : IPackageHandler
+    {
+        public override string ToString()
+        {
+            return GetType().Name;
+        }
+
+        public void HandlePackage(IMEPackage package)
+        {
+            var missionCompleteSequence = package.GetUExport(7717);
+            var failureLog = package.GetUExport(6646);
+            var successLog = package.GetUExport(6634);
+
+            var checkLiaraInSquad = SequenceObjectCreator.CreateSequenceObject(package, "BioSeqAct_PMCheckState");
+            KismetHelper.AddObjectToSequence(checkLiaraInSquad, missionCompleteSequence);
+            var checkLiaraInSquadProps = checkLiaraInSquad.GetProperties();
+            checkLiaraInSquadProps.RemoveNamedProperty("VariableLinks");
+            checkLiaraInSquadProps.RemoveNamedProperty("InputLinks");
+            checkLiaraInSquadProps.AddOrReplaceProp(new IntProperty(6879, "m_nIndex"));
+            checkLiaraInSquad.WriteProperties(checkLiaraInSquadProps);
+
+            var failureLogOutputLinks = SeqTools.GetOutboundLinksOfNode(failureLog);
+            SeqTools.WriteOutboundLinksToNode(
+                failureLog,
+                new List<List<SeqTools.OutboundLink>> {new() {new SeqTools.OutboundLink {LinkedOp = checkLiaraInSquad}}}
+            );
+            SeqTools.SkipSequenceElement(failureLog, null, 0);
+            SeqTools.WriteOutboundLinksToNode(failureLog, failureLogOutputLinks);
+
+            var checkVixenInSquad = (ExportEntry) ((IEntry) checkLiaraInSquad).Clone(true);
+            package.AddExport(checkVixenInSquad);
+            KismetHelper.AddObjectToSequence(checkVixenInSquad, missionCompleteSequence);
+            Util.WriteProperty<IntProperty>(
+                checkVixenInSquad,
+                "m_nIndex",
+                prop => prop.Value = 21
+            );
+
+            Util.AddLinkToOutputLink(checkLiaraInSquad, checkVixenInSquad, 0);
+            Util.AddLinkToOutputLink(checkLiaraInSquad, failureLog, 1);
+            Util.AddLinkToOutputLink(checkVixenInSquad, successLog, 0);
+            Util.AddLinkToOutputLink(checkVixenInSquad, failureLog, 1);
+
+            var killSquadMemberSequence = package.GetUExport(7769);
+            var mysticSquadCheck = package.GetUExport(1937);
+            var vixenSquadCheck = package.GetUExport(1933);
+            var vampirePartyCheck = package.GetUExport(1939);
+            var vampireSequenceReference = package.GetUExport(7959);
+
+            var checkLiaraInSquad2 = (ExportEntry) ((IEntry) checkLiaraInSquad).Clone(true);
+            package.AddExport(checkLiaraInSquad2);
+            KismetHelper.AddObjectToSequence(checkLiaraInSquad2, killSquadMemberSequence);
+
+            Util.RelinkOutputLink(mysticSquadCheck, 1, 0, checkLiaraInSquad2);
+            Util.RelinkOutputLink(vampirePartyCheck, 1, 0, checkLiaraInSquad2);
+
+            var liaraSequenceReference = Util.CloneSequenceReference(package, vampireSequenceReference);
+            KismetHelper.AddObjectToSequence(liaraSequenceReference, killSquadMemberSequence);
+
+            Util.RelinkOutputLink(checkLiaraInSquad2, 0, 0, liaraSequenceReference);
+            Util.RelinkOutputLink(checkLiaraInSquad2, 1, 0, vixenSquadCheck);
+
+            package.FindNameOrAdd("hench_liara");
+            var henchLiaraName = SequenceObjectCreator.CreateSequenceObject(package, "SeqVar_Name");
+            KismetHelper.AddObjectToSequence(henchLiaraName, killSquadMemberSequence);
+            var henchLiaraNameProps = henchLiaraName.GetProperties();
+            henchLiaraNameProps.AddOrReplaceProp(new NameProperty("hench_liara", "NameValue"));
+            henchLiaraName.WriteProperties(henchLiaraNameProps);
+
+            var liaraSequenceReferenceProps = liaraSequenceReference.GetProperties();
+            var liaraSequenceReferenceVarLinks = SeqTools.GetVariableLinks(liaraSequenceReferenceProps, package);
+            var firstTagLink =
+                liaraSequenceReferenceVarLinks.FirstOrDefault(varLink => "First_Tag".Equals(varLink.LinkDesc));
+            if (firstTagLink == null)
+            {
+                throw new SequenceStructureException("SequenceReference does not have First_Tag var link");
+            }
+
+            firstTagLink.LinkedNodes = new List<IEntry> {henchLiaraName};
+            SeqTools.WriteVariableLinksToProperties(liaraSequenceReferenceVarLinks, liaraSequenceReferenceProps);
+            liaraSequenceReference.WriteProperties(liaraSequenceReferenceProps);
+
+            KismetHelper.SetComment(
+                checkLiaraInSquad,
+                "Liara and Miranda cannot be killed here, trigger success if both in squad"
+            );
+        }
+    }
 }

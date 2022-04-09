@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using LegendaryExplorerCore.Helpers;
 using LegendaryExplorerCore.Kismet;
 using LegendaryExplorerCore.Packages;
@@ -88,50 +89,149 @@ namespace auto_patcher
             SeqTools.WriteOutboundLinksToNode(sourceNode, outboundLinks);
         }
 
+        public static ExportEntry CloneSequenceReference(IMEPackage package, ExportEntry sequenceReference)
+        {
+            var newSequenceReference = (ExportEntry) ((IEntry) sequenceReference).Clone(true);
+            package.AddExport(newSequenceReference);
+
+            CloneReferencedSequence(package, newSequenceReference);
+
+            return newSequenceReference;
+        }
+
+        public static void CloneReferencedSequence(IMEPackage package, ExportEntry newSequenceReference)
+        {
+            var referencedSequenceProp = newSequenceReference.GetProperty<ObjectProperty>("oSequenceReference");
+            if (referencedSequenceProp == null)
+            {
+                throw new SequenceStructureException("SequenceReference does not reference a sequence");
+            }
+
+            var referencedSequence = package.GetUExport(referencedSequenceProp.Value);
+            var newSequence = CloneSequence(package, referencedSequence);
+
+            WriteProperty<ObjectProperty>(
+                newSequenceReference,
+                "oSequenceReference",
+                prop => prop.Value = newSequence.UIndex
+            );
+
+            WriteProperty<ObjectProperty>(
+                newSequence,
+                "ParentSequence",
+                prop => prop.Value = newSequenceReference.UIndex
+            );
+
+            newSequence.idxLink = newSequenceReference.UIndex;
+        }
+
+        public static ExportEntry CloneSequence(
+            IMEPackage package,
+            ExportEntry source,
+            Dictionary<int, int> inheritedIdRelinkDictionary = null
+        )
+        {
+            var newSequence = source.Clone();
+            package.AddExport(newSequence);
+
+            var sequenceObjects = SeqTools
+                .GetAllSequenceElements(newSequence)
+                .Select(entry => (ExportEntry) entry)
+                .ToList();
+
+            WriteProperty<ArrayProperty<ObjectProperty>>(
+                newSequence,
+                "SequenceObjects",
+                prop => prop.Clear()
+            );
+
+            CopyAllSequenceObjects(sequenceObjects, newSequence, package, true, inheritedIdRelinkDictionary);
+
+            if (inheritedIdRelinkDictionary == null)
+            {
+                var sequenceActivatedEntries = SeqTools
+                    .GetAllSequenceElements(newSequence)
+                    .Where(entry => entry is ExportEntry && "SeqEvent_SequenceActivated".Equals(entry.ClassName))
+                    .Select(entry => (ExportEntry) entry)
+                    .ToList();
+
+                var finishSequenceEntries = SeqTools
+                    .GetAllSequenceElements(newSequence)
+                    .Where(entry => entry is ExportEntry && "SeqAct_FinishSequence".Equals(entry.ClassName))
+                    .Select(entry => (ExportEntry) entry)
+                    .ToList();
+
+                var propertyCollection = newSequence.GetProperties();
+                var inputLinks = propertyCollection.GetProp<ArrayProperty<StructProperty>>("InputLinks");
+                inputLinks.Clear();
+
+                static PropertyCollection GetLinkProps(ExportEntry entry, string desc)
+                {
+                    var linkProps = new PropertyCollection();
+                    linkProps.AddOrReplaceProp(new StrProperty(desc, "LinkDesc"));
+                    linkProps.AddOrReplaceProp(new NameProperty(entry.ObjectName, "LinkAction"));
+                    linkProps.AddOrReplaceProp(new ObjectProperty(entry, "LinkedOp"));
+                    return linkProps;
+                }
+
+                foreach (var sequenceActivatedEntry in sequenceActivatedEntries)
+                {
+                    inputLinks.Add(new StructProperty("SeqOpInputLink", GetLinkProps(sequenceActivatedEntry, "in")));
+                }
+
+                var outputLinks = propertyCollection.GetProp<ArrayProperty<StructProperty>>("OutputLinks");
+                outputLinks.Clear();
+                foreach (var finishSequenceEntry in finishSequenceEntries)
+                {
+                    var outputLabel = finishSequenceEntry.GetProperty<StrProperty>("OutputLabel") ?? "Out";
+                    outputLinks.Add(new StructProperty("SeqOpOutputLink",
+                        GetLinkProps(finishSequenceEntry, outputLabel)));
+                }
+
+                newSequence.WriteProperties(propertyCollection);
+            }
+
+            return newSequence;
+        }
+
         public static void CopyAllSequenceObjects(
             IEnumerable<ExportEntry> sequenceObjects,
             ExportEntry sequence,
-            IMEPackage package
+            IMEPackage package,
+            bool cloneNestedSequences = false,
+            Dictionary<int, int> inheritedRelinkDictionary = null
         )
         {
-            var idxRelinkDictionary = new Dictionary<int, int>();
+            var idxRelinkDictionary = inheritedRelinkDictionary ?? new Dictionary<int, int>();
             var newSequenceObjects = new List<ExportEntry>();
 
             foreach (var sequenceObject in sequenceObjects)
             {
-                var newSequenceObject = (ExportEntry) ((IEntry) sequenceObject).Clone(false);
-                package.AddExport(newSequenceObject);
+                ExportEntry newSequenceObject;
+                if (cloneNestedSequences && "Sequence".Equals(sequenceObject.ClassName))
+                {
+                    newSequenceObject = CloneSequence(package, sequenceObject, idxRelinkDictionary);
+                }
+                else
+                {
+                    newSequenceObject = (ExportEntry) ((IEntry) sequenceObject).Clone(false);
+                    package.AddExport(newSequenceObject);
+                }
+
                 KismetHelper.AddObjectToSequence(newSequenceObject, sequence);
                 idxRelinkDictionary[sequenceObject.UIndex] = newSequenceObject.UIndex;
                 newSequenceObjects.Add(newSequenceObject);
+
+                if (cloneNestedSequences && "SequenceReference".Equals(newSequenceObject.ClassName))
+                {
+                    CloneReferencedSequence(package, newSequenceObject);
+                }
             }
 
             // fix links
             foreach (var newSequenceObject in newSequenceObjects)
             {
-                var outboundLinksOfNode = SeqTools.GetOutboundLinksOfNode(newSequenceObject);
                 var variableLinksOfNode = SeqTools.GetVariableLinksOfNode(newSequenceObject);
-
-                if (outboundLinksOfNode != null && !outboundLinksOfNode.IsEmpty())
-                {
-                    foreach (var outboundLinks in outboundLinksOfNode)
-                    {
-                        foreach (var outboundLink in outboundLinks)
-                        {
-                            var outboundLinkLinkedOp = outboundLink.LinkedOp;
-                            if (outboundLinkLinkedOp == null)
-                            {
-                                continue;
-                            }
-
-                            var newIdx = idxRelinkDictionary[outboundLinkLinkedOp.UIndex];
-                            outboundLink.LinkedOp = package.GetUExport(newIdx);
-                        }
-                    }
-
-                    SeqTools.WriteOutboundLinksToNode(newSequenceObject, outboundLinksOfNode);
-                }
-
                 if (variableLinksOfNode != null && !variableLinksOfNode.IsEmpty())
                 {
                     foreach (var varLinkInfo in variableLinksOfNode)
@@ -145,6 +245,56 @@ namespace auto_patcher
 
                     SeqTools.WriteVariableLinksToNode(newSequenceObject, variableLinksOfNode);
                 }
+
+                void remapLink(StructProperty structProperty)
+                {
+                    var linkedOp = structProperty.GetProp<ObjectProperty>("LinkedOp");
+                    if (linkedOp != null && linkedOp.Value > 0)
+                    {
+                        linkedOp.Value = idxRelinkDictionary[linkedOp.Value];
+                    }
+                    else
+                    {
+                        return;
+                    }
+
+                    var linkAction = structProperty.GetProp<NameProperty>("LinkAction");
+                    if (linkAction != null && !"None".CaseInsensitiveEquals(linkAction.Value))
+                    {
+                        linkAction.Value = package.GetUExport(linkedOp.Value).ObjectName;
+                    }
+                }
+
+                var newSequenceObjectProps = newSequenceObject.GetProperties();
+
+                var inputLinks = newSequenceObjectProps.GetProp<ArrayProperty<StructProperty>>("InputLinks");
+                if (inputLinks != null)
+                {
+                    foreach (var inputLink in inputLinks)
+                    {
+                        remapLink(inputLink);
+                    }
+                }
+
+                var outputLinks = newSequenceObjectProps.GetProp<ArrayProperty<StructProperty>>("OutputLinks");
+                if (outputLinks != null)
+                {
+                    foreach (var outputLink in outputLinks)
+                    {
+                        var links = outputLink.GetProp<ArrayProperty<StructProperty>>("Links");
+                        if (links != null)
+                        {
+                            foreach (var link in links)
+                            {
+                                remapLink(link);
+                            }
+                        }
+
+                        remapLink(outputLink);
+                    }
+                }
+
+                newSequenceObject.WriteProperties(newSequenceObjectProps);
             }
         }
 

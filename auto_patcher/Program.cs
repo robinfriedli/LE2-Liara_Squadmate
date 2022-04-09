@@ -87,7 +87,8 @@ namespace auto_patcher
             {"BioH_Liara_00", new BioHLiaraSpawnSequencePackageHandler()},
             {"BioP_Global", new BioPGlobalPackageHandler()},
             {"BioP_EndGm1", new BioPEndGm1TriggerStreamsPackageHandler()},
-            {"BioP_EndGm_StuntHench", new BioPEndGmStuntHenchPackageHandler()}
+            {"BioP_EndGm_StuntHench", new BioPEndGmStuntHenchPackageHandler()},
+            {"BioD_EndGm2_300Conclusion", new BioDEndGm2300ConclusionPackageHandler()}
         };
 
         public static readonly Dictionary<int, int> ReplacedStateEventIds = new()
@@ -306,28 +307,39 @@ namespace auto_patcher
                 using var package = MEPackageHandler.OpenMEPackageFromStream(fs, targetFile);
                 fs.Close();
 
-                ScanPackage(package, true, out var collectedHandlers);
-
-                if (!collectedHandlers.IsEmpty())
+                void HandlePackage(IPackageHandler packageHandler, IMEPackage package)
                 {
-                    foreach (var packageHandler in collectedHandlers)
+                    try
                     {
-                        try
-                        {
-                            packageHandler.HandlePackage(package);
-                            if (verbose)
-                            {
-                                Console.WriteLine(
-                                    $"INFO: Handled {packageHandler} in file {targetFile}");
-                            }
-                        }
-                        catch (SequenceStructureException e)
+                        packageHandler.HandlePackage(package);
+                        if (verbose)
                         {
                             Console.WriteLine(
-                                $"ERROR: Failed to handle {packageHandler} in file {targetFile}: {e.Message}");
+                                $"INFO: Handled {packageHandler} in file {targetFile}");
                         }
                     }
+                    catch (SequenceStructureException e)
+                    {
+                        Console.WriteLine(
+                            $"ERROR: Failed to handle {packageHandler} in file {targetFile}: {e.Message}");
+                    }
+                }
 
+                PackageHandlers.TryGetValue(package.FileNameNoExtension, out var handler);
+                if (handler != null)
+                {
+                    HandlePackage(handler, package);
+                }
+
+                ScanPackage(package, true, out var collectedHandlers);
+
+                foreach (var packageHandler in collectedHandlers)
+                {
+                    HandlePackage(packageHandler, package);
+                }
+
+                if (handler != null || !collectedHandlers.IsEmpty())
+                {
                     package.Save();
                 }
                 else if (verbose)
@@ -339,24 +351,13 @@ namespace auto_patcher
 
         static bool IsPackageRelevant(IMEPackage package)
         {
-            return ScanPackage(package, false, out _);
+            return PackageHandlers.ContainsKey(package.FileNameNoExtension) || ScanPackage(package, false, out _);
         }
 
         static bool ScanPackage(IMEPackage package, bool collectHandlers, out List<IPackageHandler> collectedHandlers)
         {
             collectedHandlers = new List<IPackageHandler>();
             var foundLookupHenchmanFromPlotManager = false;
-
-            PackageHandlers.TryGetValue(package.FileNameNoExtension, out var packageHandler);
-            if (packageHandler != null)
-            {
-                if (!collectHandlers)
-                {
-                    return true;
-                }
-
-                collectedHandlers.Add(packageHandler);
-            }
 
             foreach (var packageExport in package.Exports)
             {
