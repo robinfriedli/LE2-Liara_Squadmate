@@ -1,8 +1,11 @@
 ﻿#nullable enable
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using CommandLine;
 using LegendaryExplorerCore;
 using LegendaryExplorerCore.GameFilesystem;
@@ -16,6 +19,8 @@ namespace auto_patcher
 {
     class Program
     {
+        public static readonly int NumCpus = Environment.ProcessorCount;
+
         public const int LiaraInSquadPlotId = 6879;
         public const int LiaraWasInSquadPlotId = 10915;
         public const int LiaraInSquadPlotTransitionId = 10931;
@@ -121,6 +126,11 @@ namespace auto_patcher
                 HelpText =
                     "Only generate the BioH_END_Liara_00 file based on the output dir's BioH_Liara_00 file. Ignores -f and -g.")]
             public bool BioHEndOnly { get; set; }
+
+            [Option('b', "batch-count", Required = false,
+                HelpText =
+                    "The number of batches files are split into for concurrent execution. The actual number of threads is defined by .net's default thread pool configuration. Only applies to handling the entire game directory using -g.")]
+            public int BatchCount { get; set; }
         }
 
         static void Main(string[] args)
@@ -156,7 +166,12 @@ namespace auto_patcher
             }
             else if (options.GameDir != null && !options.GameDir.IsEmpty())
             {
-                HandleGameDir(options.GameDir, outputDirName, options.Verbose);
+                HandleGameDir(
+                    options.GameDir,
+                    outputDirName,
+                    options.Verbose,
+                    options.BatchCount > 0 ? options.BatchCount : NumCpus
+                );
             }
             else
             {
@@ -182,7 +197,7 @@ namespace auto_patcher
             HandleRelevantPackageFiles(targetFiles, verbose);
         }
 
-        static void HandleGameDir(string gameDir, string outputDirName, bool verbose)
+        static void HandleGameDir(string gameDir, string outputDirName, bool verbose, int batchCount)
         {
             if (!Directory.Exists(gameDir))
             {
@@ -201,12 +216,83 @@ namespace auto_patcher
             }
 
             Console.WriteLine("INFO: Finding and copying relevant files");
-            var targetFiles = CollectAndCopyRelevantPackageFiles(filePaths, outputDirName);
+            var groupDictionary = new Dictionary<string, int>();
+            var targetFiles = new ConcurrentBag<string>();
+            BatchExecute(
+                filePaths,
+                batch =>
+                {
+                    var files = CollectAndCopyRelevantPackageFiles(batch, outputDirName);
+                    foreach (var file in files)
+                    {
+                        targetFiles.Add(file);
+                    }
+                },
+                tuple =>
+                {
+                    var (file, idx) = tuple;
+                    var fileName = Path.GetFileName(file);
+                    // make sure the same packages end up in the same bucket
+                    if (groupDictionary.TryGetValue(fileName, out var existingGroup))
+                    {
+                        return existingGroup;
+                    }
+
+                    return groupDictionary[fileName] = idx % batchCount;
+                }
+            );
+
             Console.WriteLine("INFO: Applying changes to files");
-            HandleRelevantPackageFiles(targetFiles, verbose);
+
+            BatchExecute(
+                targetFiles,
+                batchCount,
+                batch => HandleRelevantPackageFiles(batch, verbose)
+            );
+
             Console.WriteLine("INFO: Generating BioH_END_Liara_00");
             GenerateBioHEndLiara(outputDirName);
             Console.WriteLine("Done");
+        }
+
+        static void BatchExecute<T>(IEnumerable<T> data, int batchCount, Action<List<T>> action)
+        {
+            BatchExecute(data, action, tuple => tuple.Item2 % batchCount);
+        }
+
+        // Split data into batches according to the provided groupFunc and process them concurrently, awaiting the completion
+        // for all items.
+        static void BatchExecute<T>(IEnumerable<T> data, Action<List<T>> action, Func<(T, int), int> groupFunc)
+        {
+            var batches = data
+                .Select((item, idx) => (item, idx))
+                .GroupBy(groupFunc.Invoke)
+                .Select(group => @group.Select(item => item.item).ToList())
+                .ToList();
+
+            var countdownEvent = new CountdownEvent(1);
+            foreach (var batch in batches)
+            {
+                countdownEvent.AddCount();
+                Task.Run(() =>
+                {
+                    try
+                    {
+                        action.Invoke(batch);
+                    }
+                    catch (Exception e)
+                    {
+                        Console.Write($"ERROR: Exception occurred executing submitted action: {e}");
+                    }
+                    finally
+                    {
+                        countdownEvent.Signal();
+                    }
+                });
+            }
+
+            countdownEvent.Signal();
+            countdownEvent.Wait();
         }
 
         static void CollectPackageFiles(string dir, ISet<string> filePaths)
