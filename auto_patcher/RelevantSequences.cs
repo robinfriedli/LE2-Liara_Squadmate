@@ -67,7 +67,7 @@ namespace auto_patcher
             Util.WriteProperty<IntProperty>(
                 checkStateLiara,
                 "m_nIndex",
-                prop => prop.Value = Program.LiaraInSquadPlotId
+                prop => prop.Value = AutoPatcherLib.LiaraInSquadPlotId
             );
 
             KismetHelper.AddObjectToSequence(checkStateLiara, Sequence);
@@ -177,7 +177,7 @@ namespace auto_patcher
             Util.WriteProperty<IntProperty>(
                 liaraSequenceReferenceHenchId,
                 "IntValue",
-                prop => prop.Value = Program.LiaraHenchmanId
+                prop => prop.Value = AutoPatcherLib.LiaraHenchmanId
             );
 
             KismetHelper.AddObjectToSequence(liaraSequenceReferenceHenchId, Sequence);
@@ -262,11 +262,11 @@ namespace auto_patcher
             falseOutboundLink.LinkedOp = cmpNameLiara;
             SeqTools.WriteOutboundLinksToNode(KeySequenceObject, outboundLinksOfNode);
 
-            package.FindNameOrAdd(Program.LiaraHenchTag);
+            package.FindNameOrAdd(AutoPatcherLib.LiaraHenchTag);
             Util.WriteProperty<NameProperty>(
                 cmpNameLiara,
                 "ValueB",
-                prop => prop.Value = new NameReference(Program.LiaraHenchTag)
+                prop => prop.Value = new NameReference(AutoPatcherLib.LiaraHenchTag)
             );
 
             KismetHelper.AddObjectToSequence(cmpNameLiara, Sequence);
@@ -358,7 +358,7 @@ namespace auto_patcher
             Util.WriteProperty<IntProperty>(
                 liaraPlotTransition,
                 "m_nIndex",
-                prop => prop.Value = Program.LiaraInSquadPlotTransitionId
+                prop => prop.Value = AutoPatcherLib.LiaraInSquadPlotTransitionId
             );
 
             package.AddExport(liaraPlotTransition);
@@ -432,8 +432,8 @@ namespace auto_patcher
             sequence,
             sequenceObjects,
             keySequenceObject,
-            Program.LiaraInSquadPlotId,
-            Program.LiaraWasInSquadPlotTransitionId
+            AutoPatcherLib.LiaraInSquadPlotId,
+            AutoPatcherLib.LiaraWasInSquadPlotTransitionId
         )
         {
         }
@@ -484,8 +484,8 @@ namespace auto_patcher
             sequence,
             sequenceObjects,
             keySequenceObject,
-            Program.LiaraWasInSquadPlotId,
-            Program.LiaraInSquadPlotTransitionId
+            AutoPatcherLib.LiaraWasInSquadPlotId,
+            AutoPatcherLib.LiaraInSquadPlotTransitionId
         )
         {
         }
@@ -521,7 +521,7 @@ namespace auto_patcher
                 Util.WriteProperty<IntProperty>(
                     replacedStateTransition,
                     "m_nIndex",
-                    prop => prop.Value = Program.ReplacedStateEventIds[prop.Value]);
+                    prop => prop.Value = AutoPatcherLib.ReplacedStateEventIds[prop.Value]);
             }
         }
     }

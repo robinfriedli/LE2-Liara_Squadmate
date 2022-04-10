@@ -2,17 +2,18 @@ Auto patch CLI utility that applies all changes to relevant sequences automatica
 special adjustments and have to be modded manually (e.g. the LotSB DLC).
 
 Options:
--f, --files      Specific package files to mod, must be set if -g is not set.
 
--g, --gamedir    Game directory to scan for package files, must be set if -f is not set.
-
--d, --dir        The output directory for modified packages, defaults to '..\DLC_MOD_LiaraSquad\CookedPCConsole'.
-
--v, --verbose    Set output to verbose messages.
-
---help           Display this help screen.
-
---version        Display version information.
+| Option                    | Description |
+|---------------------------|---------------------------------------------------------------------------------------------|
+| -f, --files               | Specific package files to mod, must be set if -g is not set. |
+| -g, --gamedir             | Game directory to scan for package files, must be set if -f is not set. |
+| -d, --dir                 | The output directory for modified packages, defaults to '..\DLC_MOD_LiaraSquad\CookedPCConsole'. |
+| -v, --verbose             | Set output to verbose messages. |
+| --bioh-end-only           | Only generate the BioH_END_Liara_00 file based on the output dir's BioH_Liara_00 file. Ignores -f and -g. |
+| -b, --batch-count         | The number of batches files are split into for concurrent execution. The actual number of threads is defined by .net's default thread pool configuration. Only applies to handling the entire game directory using -g. |
+| --retain-mount-priority   | Prevent auto_patcher from adjusting the mount priority of this mod automatically to ensure it mounts above mods where files have been patched. |
+| --help                    | Display this help screen. |
+| --version                 | Display version information. |
 
 ## Run
 

@@ -8,7 +8,7 @@ using LegendaryExplorerCore.Unreal;
 
 namespace auto_patcher
 {
-    interface IPackageHandler
+    public interface IPackageHandler
     {
         public void HandlePackage(IMEPackage package);
     }
@@ -56,12 +56,12 @@ namespace auto_patcher
                 }
             }
 
-            if (templateTrackProp == null || foundActorTags.Contains(Program.LiaraHenchTag))
+            if (templateTrackProp == null || foundActorTags.Contains(AutoPatcherLib.LiaraHenchTag))
             {
                 return null;
             }
 
-            var foundHenchTags = Program.HenchTags.Intersect(foundActorTags);
+            var foundHenchTags = AutoPatcherLib.HenchTags.Intersect(foundActorTags);
             if (foundHenchTags.Count() >= 11)
             {
                 return new TrackGestureInterpGroup(
@@ -81,11 +81,11 @@ namespace auto_patcher
             package.AddExport(liaraTrackProp);
             liaraTrackObjProp.Value = liaraTrackProp.UIndex;
 
-            package.FindNameOrAdd(Program.LiaraHenchTag);
+            package.FindNameOrAdd(AutoPatcherLib.LiaraHenchTag);
             Util.WriteProperty<NameProperty>(
                 liaraTrackProp,
                 "m_nmFindActor",
-                nameProp => nameProp.Value = new NameReference(Program.LiaraHenchTag)
+                nameProp => nameProp.Value = new NameReference(AutoPatcherLib.LiaraHenchTag)
             );
 
             Util.WriteProperty<StrProperty>(

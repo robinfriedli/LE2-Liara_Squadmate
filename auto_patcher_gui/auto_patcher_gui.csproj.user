@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <_LastSelectedProfileId>C:\Users\robinfriedli\Documents\ME3TweaksModManager\mods\LE2\LE2-Liara_Squadmate\auto_patcher_gui\Properties\PublishProfiles\FolderProfile.pubxml</_LastSelectedProfileId>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Update="AutoPatcherForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="CollectedErrorsForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+  </ItemGroup>
+</Project>
