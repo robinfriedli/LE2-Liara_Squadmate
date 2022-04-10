@@ -1,3 +1,18 @@
+## [2.0] - 2022-04-10
+
+ - Added Liara to the Normandy crew after completing the Normandy date.
+   - Added level BioD_Nor_109Liara that places Liara at an unused terminal at the CIC and add greeting from ME3.
+ - Added text prompts when Liara is recruited or moved to the Normandy.
+ - Handle additional cutscenes by handling all InterpGroups with an InterpTrack for each squadmate by adding a track for Liara based on Samara.
+   - Fixes Liara standing in the shuttle instead of sitting during the opening cutscene for Jack's loyalty mission, and presumably more cutscenes.
+ - Expanded auto_patcher:
+   - Added a GUI desktop app for the auto_patcher: auto_patcher_gui.
+   - Handle additional packages automatically that were previously modded manually.
+   - Speed up process by splitting the files into a configurable number of batches that are handled concurrently.
+ - Adjust suicide mission:
+   - Fix cutscene after the long walk / biotic specialist phase when Liara and Miranda are in the squad and make sure that the success cutscene plays as neither of them can die at this point.
+   - Adjust cutscene after the reaper battle to reverse the roles of the squadmate that is rescued first and the squadmate that rescues Shepard, setting both to Liara if in squad.
+
 ## [1.3] - 2022-01-19
 
  - Added compatibility patch for the Expanded Shepard Armory mod.
