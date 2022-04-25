@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -189,7 +190,7 @@ namespace auto_patcher_gui
         {
             if (folderBrowserDialog2.ShowDialog() == DialogResult.OK)
             {
-                textBox2.Text = folderBrowserDialog1.SelectedPath;
+                textBox2.Text = folderBrowserDialog2.SelectedPath;
             }
         }
 
@@ -335,6 +336,39 @@ namespace auto_patcher_gui
 
         private void stateLabel_Click(object sender, EventArgs e)
         {
+        }
+    }
+
+    public class AutoGrowLabel : Label
+    {
+        public AutoGrowLabel()
+        {
+            AutoSize = false;
+        }
+
+        private void ResizeLabel()
+        {
+            var size = new Size(Width, Int32.MaxValue);
+            size = TextRenderer.MeasureText(Text, Font, size, TextFormatFlags.WordBreak);
+            Height = size.Height + Padding.Vertical;
+        }
+
+        protected override void OnTextChanged(EventArgs e)
+        {
+            base.OnTextChanged(e);
+            ResizeLabel();
+        }
+
+        protected override void OnFontChanged(EventArgs e)
+        {
+            base.OnFontChanged(e);
+            ResizeLabel();
+        }
+
+        protected override void OnSizeChanged(EventArgs e)
+        {
+            base.OnSizeChanged(e);
+            ResizeLabel();
         }
     }
 }
