@@ -94,6 +94,7 @@ namespace auto_patcher
             {"BioD_Exp1Lvl5_200Cabin", new InsertShowMessageActionPackageHandler(566, 593, 554, 10900007)},
             {"BioH_Liara_00", new BioHLiaraSpawnSequencePackageHandler()},
             {"BioP_Global", new BioPGlobalPackageHandler()},
+            {"BioP_Global_NC", new BioPGlobalPackageHandler()},
             {"BioP_EndGm1", new BioPEndGm1TriggerStreamsPackageHandler()},
             {"BioP_EndGm_StuntHench", new BioPEndGmStuntHenchPackageHandler()},
             {"BioD_EndGm2_300Conclusion", new BioDEndGm2300ConclusionPackageHandler()}
