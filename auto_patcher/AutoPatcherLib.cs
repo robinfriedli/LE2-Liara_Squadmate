@@ -144,6 +144,8 @@ namespace auto_patcher
                 return;
             }
 
+            LE2Directory.DefaultGamePath = gameDir;
+
             _progressEventListener?.OnScanning();
 
             var filePaths = new HashSet<string>();

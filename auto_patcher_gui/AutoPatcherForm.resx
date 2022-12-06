@@ -74,6 +74,10 @@ Make sure to install mods in the following order:
   <metadata name="folderBrowserDialog2.TrayLocation" type="System.Drawing.Point, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
     <value>186, 17</value>
   </metadata>
+  <data name="autoGrowLabel1.Text" xml:space="preserve">
+    <value>Location of this mod's CookedPCConsole folder within the mod library, meaning where ME3Tweaks imported the mod, not where the DLC is located in the game files.
+E.g. E:\ME3Tweaks\LE2\LE2-Liara_Squadmate\DLC_MOD_LiaraSquad\CookedPCConsole</value>
+  </data>
   <metadata name="$this.TrayHeight" type="System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
     <value>57</value>
   </metadata>
