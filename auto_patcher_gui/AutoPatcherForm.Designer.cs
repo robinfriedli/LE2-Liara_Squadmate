@@ -50,6 +50,7 @@ namespace auto_patcher_gui
             this.label6 = new System.Windows.Forms.Label();
             this.checkBox1 = new System.Windows.Forms.CheckBox();
             this.autoGrowLabel1 = new auto_patcher_gui.AutoGrowLabel();
+            this.autoGrowLabel2 = new auto_patcher_gui.AutoGrowLabel();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.batchCountField)).BeginInit();
             this.SuspendLayout();
@@ -62,19 +63,21 @@ namespace auto_patcher_gui
             // 
             this.textBox1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.textBox1.Location = new System.Drawing.Point(165, 220);
+            this.textBox1.Location = new System.Drawing.Point(236, 367);
+            this.textBox1.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.textBox1.Name = "textBox1";
             this.textBox1.ReadOnly = true;
-            this.textBox1.Size = new System.Drawing.Size(492, 23);
+            this.textBox1.Size = new System.Drawing.Size(701, 31);
             this.textBox1.TabIndex = 0;
             this.textBox1.TextChanged += new System.EventHandler(this.textChangedEventHandler);
             // 
             // label1
             // 
             this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(12, 223);
+            this.label1.Location = new System.Drawing.Point(17, 372);
+            this.label1.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(108, 15);
+            this.label1.Size = new System.Drawing.Size(162, 25);
             this.label1.TabIndex = 1;
             this.label1.Text = "LE2 Game Location";
             this.label1.Click += new System.EventHandler(this.label1_Click);
@@ -82,9 +85,10 @@ namespace auto_patcher_gui
             // button1
             // 
             this.button1.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.button1.Location = new System.Drawing.Point(663, 220);
+            this.button1.Location = new System.Drawing.Point(947, 363);
+            this.button1.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.button1.Name = "button1";
-            this.button1.Size = new System.Drawing.Size(62, 23);
+            this.button1.Size = new System.Drawing.Size(89, 38);
             this.button1.TabIndex = 2;
             this.button1.Text = "Browse";
             this.button1.UseVisualStyleBackColor = true;
@@ -95,8 +99,9 @@ namespace auto_patcher_gui
             this.pictureBox1.Dock = System.Windows.Forms.DockStyle.Top;
             this.pictureBox1.Image = global::auto_patcher_gui.Properties.Resources.banner;
             this.pictureBox1.Location = new System.Drawing.Point(0, 0);
+            this.pictureBox1.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.pictureBox1.Name = "pictureBox1";
-            this.pictureBox1.Size = new System.Drawing.Size(734, 60);
+            this.pictureBox1.Size = new System.Drawing.Size(1049, 100);
             this.pictureBox1.SizeMode = System.Windows.Forms.PictureBoxSizeMode.CenterImage;
             this.pictureBox1.TabIndex = 3;
             this.pictureBox1.TabStop = false;
@@ -106,9 +111,10 @@ namespace auto_patcher_gui
             this.label2.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(12, 63);
+            this.label2.Location = new System.Drawing.Point(17, 105);
+            this.label2.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(524, 135);
+            this.label2.Size = new System.Drawing.Size(790, 225);
             this.label2.TabIndex = 4;
             this.label2.Text = resources.GetString("label2.Text");
             this.label2.Click += new System.EventHandler(this.label2_Click);
@@ -117,19 +123,21 @@ namespace auto_patcher_gui
             // 
             this.textBox2.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.textBox2.Location = new System.Drawing.Point(165, 249);
+            this.textBox2.Location = new System.Drawing.Point(238, 467);
+            this.textBox2.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.textBox2.Name = "textBox2";
             this.textBox2.ReadOnly = true;
-            this.textBox2.Size = new System.Drawing.Size(492, 23);
+            this.textBox2.Size = new System.Drawing.Size(701, 31);
             this.textBox2.TabIndex = 5;
             this.textBox2.TextChanged += new System.EventHandler(this.textChangedEventHandler);
             // 
             // label3
             // 
             this.label3.AutoSize = true;
-            this.label3.Location = new System.Drawing.Point(12, 253);
+            this.label3.Location = new System.Drawing.Point(17, 470);
+            this.label3.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.label3.Name = "label3";
-            this.label3.Size = new System.Drawing.Size(120, 15);
+            this.label3.Size = new System.Drawing.Size(182, 25);
             this.label3.TabIndex = 6;
             this.label3.Text = "Mod Import Location";
             this.label3.Click += new System.EventHandler(this.label3_Click);
@@ -137,9 +145,10 @@ namespace auto_patcher_gui
             // button2
             // 
             this.button2.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.button2.Location = new System.Drawing.Point(663, 249);
+            this.button2.Location = new System.Drawing.Point(947, 463);
+            this.button2.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.button2.Name = "button2";
-            this.button2.Size = new System.Drawing.Size(62, 23);
+            this.button2.Size = new System.Drawing.Size(89, 38);
             this.button2.TabIndex = 7;
             this.button2.Text = "Browse";
             this.button2.UseVisualStyleBackColor = true;
@@ -148,9 +157,10 @@ namespace auto_patcher_gui
             // applyButton
             // 
             this.applyButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.applyButton.Location = new System.Drawing.Point(650, 576);
+            this.applyButton.Location = new System.Drawing.Point(929, 960);
+            this.applyButton.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.applyButton.Name = "applyButton";
-            this.applyButton.Size = new System.Drawing.Size(75, 23);
+            this.applyButton.Size = new System.Drawing.Size(107, 38);
             this.applyButton.TabIndex = 9;
             this.applyButton.Text = "Apply";
             this.applyButton.UseVisualStyleBackColor = true;
@@ -160,9 +170,10 @@ namespace auto_patcher_gui
             // 
             this.progressBar1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.progressBar1.Location = new System.Drawing.Point(12, 516);
+            this.progressBar1.Location = new System.Drawing.Point(17, 860);
+            this.progressBar1.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.progressBar1.Name = "progressBar1";
-            this.progressBar1.Size = new System.Drawing.Size(713, 23);
+            this.progressBar1.Size = new System.Drawing.Size(1019, 38);
             this.progressBar1.TabIndex = 10;
             // 
             // outputBox
@@ -172,22 +183,24 @@ namespace auto_patcher_gui
             this.outputBox.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.outputBox.Location = new System.Drawing.Point(12, 389);
+            this.outputBox.Location = new System.Drawing.Point(17, 648);
+            this.outputBox.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.outputBox.MaxLength = 500000;
             this.outputBox.Multiline = true;
             this.outputBox.Name = "outputBox";
             this.outputBox.ReadOnly = true;
             this.outputBox.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
-            this.outputBox.Size = new System.Drawing.Size(713, 121);
+            this.outputBox.Size = new System.Drawing.Size(1017, 199);
             this.outputBox.TabIndex = 11;
             this.outputBox.TextChanged += new System.EventHandler(this.textBox3_TextChanged);
             // 
             // label5
             // 
             this.label5.AutoSize = true;
-            this.label5.Location = new System.Drawing.Point(12, 371);
+            this.label5.Location = new System.Drawing.Point(17, 618);
+            this.label5.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.label5.Name = "label5";
-            this.label5.Size = new System.Drawing.Size(45, 15);
+            this.label5.Size = new System.Drawing.Size(69, 25);
             this.label5.TabIndex = 12;
             this.label5.Text = "Output";
             // 
@@ -195,9 +208,10 @@ namespace auto_patcher_gui
             // 
             this.stateLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.stateLabel.AutoSize = true;
-            this.stateLabel.Location = new System.Drawing.Point(12, 542);
+            this.stateLabel.Location = new System.Drawing.Point(17, 903);
+            this.stateLabel.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.stateLabel.Name = "stateLabel";
-            this.stateLabel.Size = new System.Drawing.Size(39, 15);
+            this.stateLabel.Size = new System.Drawing.Size(60, 25);
             this.stateLabel.TabIndex = 13;
             this.stateLabel.Text = "Ready";
             this.stateLabel.Click += new System.EventHandler(this.stateLabel_Click);
@@ -205,18 +219,20 @@ namespace auto_patcher_gui
             // batchCountField
             // 
             this.batchCountField.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-            this.batchCountField.Location = new System.Drawing.Point(12, 576);
+            this.batchCountField.Location = new System.Drawing.Point(17, 960);
+            this.batchCountField.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.batchCountField.Name = "batchCountField";
-            this.batchCountField.Size = new System.Drawing.Size(45, 23);
+            this.batchCountField.Size = new System.Drawing.Size(64, 31);
             this.batchCountField.TabIndex = 14;
             // 
             // label6
             // 
             this.label6.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.label6.AutoSize = true;
-            this.label6.Location = new System.Drawing.Point(63, 580);
+            this.label6.Location = new System.Drawing.Point(90, 967);
+            this.label6.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.label6.Name = "label6";
-            this.label6.Size = new System.Drawing.Size(73, 15);
+            this.label6.Size = new System.Drawing.Size(108, 25);
             this.label6.TabIndex = 15;
             this.label6.Text = "Batch Count";
             // 
@@ -226,9 +242,10 @@ namespace auto_patcher_gui
             this.checkBox1.AutoSize = true;
             this.checkBox1.Checked = true;
             this.checkBox1.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.checkBox1.Location = new System.Drawing.Point(142, 579);
+            this.checkBox1.Location = new System.Drawing.Point(203, 968);
+            this.checkBox1.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.checkBox1.Name = "checkBox1";
-            this.checkBox1.Size = new System.Drawing.Size(245, 19);
+            this.checkBox1.Size = new System.Drawing.Size(364, 29);
             this.checkBox1.TabIndex = 16;
             this.checkBox1.Text = "Adjust Mod Mount Priority Automatically";
             this.checkBox1.UseVisualStyleBackColor = true;
@@ -237,19 +254,30 @@ namespace auto_patcher_gui
             // 
             this.autoGrowLabel1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.autoGrowLabel1.Location = new System.Drawing.Point(165, 275);
+            this.autoGrowLabel1.Location = new System.Drawing.Point(238, 503);
+            this.autoGrowLabel1.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.autoGrowLabel1.Name = "autoGrowLabel1";
-            this.autoGrowLabel1.Size = new System.Drawing.Size(492, 30);
+            this.autoGrowLabel1.Size = new System.Drawing.Size(703, 75);
             this.autoGrowLabel1.TabIndex = 17;
-            this.autoGrowLabel1.Text = "Location of the CookedPCConsole folder within the mod library, meaning where ME3T" +
-    "weaks imported the mod, not where the DLC is located in the game files.";
+            this.autoGrowLabel1.Text = resources.GetString("autoGrowLabel1.Text");
+            // 
+            // autoGrowLabel2
+            // 
+            this.autoGrowLabel2.AutoSize = true;
+            this.autoGrowLabel2.Location = new System.Drawing.Point(236, 403);
+            this.autoGrowLabel2.Name = "autoGrowLabel2";
+            this.autoGrowLabel2.Size = new System.Drawing.Size(648, 50);
+            this.autoGrowLabel2.TabIndex = 18;
+            this.autoGrowLabel2.Text = "Location of the BioGame folder within LE2\'s install directory.\r\nE.g. E:\\steamapps" +
+    "\\common\\Mass Effect Legendary Edition\\Game\\ME2\\BioGame\r\n";
             // 
             // AutoPatcherForm
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(10F, 25F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.SystemColors.Control;
-            this.ClientSize = new System.Drawing.Size(734, 611);
+            this.ClientSize = new System.Drawing.Size(1049, 1018);
+            this.Controls.Add(this.autoGrowLabel2);
             this.Controls.Add(this.autoGrowLabel1);
             this.Controls.Add(this.checkBox1);
             this.Controls.Add(this.label6);
@@ -268,9 +296,10 @@ namespace auto_patcher_gui
             this.Controls.Add(this.label1);
             this.Controls.Add(this.textBox1);
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
+            this.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.MaximizeBox = false;
-            this.MaximumSize = new System.Drawing.Size(1160, 1440);
-            this.MinimumSize = new System.Drawing.Size(750, 650);
+            this.MaximumSize = new System.Drawing.Size(1648, 2363);
+            this.MinimumSize = new System.Drawing.Size(1062, 1046);
             this.Name = "AutoPatcherForm";
             this.Text = "auto_patcher";
             this.Load += new System.EventHandler(this.AutoPatcherForm_Load);
@@ -303,5 +332,6 @@ namespace auto_patcher_gui
         private Label label6;
         private CheckBox checkBox1;
         private AutoGrowLabel autoGrowLabel1;
+        private AutoGrowLabel autoGrowLabel2;
     }
 }
