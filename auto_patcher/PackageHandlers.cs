@@ -398,6 +398,13 @@ namespace auto_patcher
 
     class BioPGlobalPackageHandler : IPackageHandler
     {
+        private readonly bool _isNc;
+
+        public BioPGlobalPackageHandler(bool isNc)
+        {
+            _isNc = isNc;
+        }
+
         public override string ToString()
         {
             return GetType().Name;
@@ -407,7 +414,7 @@ namespace auto_patcher
         {
             package.FindNameOrAdd("stream_liara_00");
             package.FindNameOrAdd("BioH_Liara");
-            package.FindNameOrAdd("BioH_Liara_00");
+            package.FindNameOrAdd(_isNc ? "BioH_Liara_00_NC" : "BioH_Liara_00");
 
             var spawnHenchmen0CreateHenchmenActivated = HandleCreateHenchmenSequence(package, 214, 169);
             HandleSpawnHenchmanSequence(package, 174, 214, spawnHenchmen0CreateHenchmenActivated);
@@ -447,8 +454,10 @@ namespace auto_patcher
             var bioWorldInfoProps = bioWorldInfo.GetProperties();
             var plotStreamingArr = bioWorldInfoProps.GetProp<ArrayProperty<StructProperty>>("PlotStreaming");
             var liaraPlotStreamingElementProps = new PropertyCollection();
-            liaraPlotStreamingElementProps.AddOrReplaceProp(new NameProperty(new NameReference("BioH_Liara_00"),
-                new NameReference("ChunkName")));
+            liaraPlotStreamingElementProps.AddOrReplaceProp(new NameProperty(
+                new NameReference(_isNc ? "BioH_Liara_00_NC" : "BioH_Liara_00"),
+                new NameReference("ChunkName")
+            ));
             liaraPlotStreamingElementProps.AddOrReplaceProp(new BoolProperty(true, new NameReference("bFallback")));
             var liaraPlotStreamingSetProps = new PropertyCollection();
             liaraPlotStreamingSetProps.AddOrReplaceProp(new ArrayProperty<StructProperty>(
